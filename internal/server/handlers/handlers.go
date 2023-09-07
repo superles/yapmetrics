@@ -20,8 +20,9 @@ func UpdatePage(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusNotFound)
 		return
 	}
-	metricType := parts[1]
+	fmt.Println(parts)
 
+	metricType := parts[1]
 	match, err := regexp.MatchString("^\\w", parts[2])
 	if !match && err == nil {
 		fmt.Println("метрика должна начинаться с буквы")
