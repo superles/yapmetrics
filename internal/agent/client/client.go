@@ -6,10 +6,12 @@ import (
 )
 
 func Send(url string) (bool, error) {
-	response, err := http.Post(url, "text/plain", nil)
+	response, _ := http.Post(url, "text/plain", nil)
+	err := response.Body.Close()
 	if err != nil {
 		return false, err
 	}
+
 	if response.StatusCode == http.StatusOK {
 		return true, nil
 	}
