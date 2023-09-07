@@ -23,7 +23,7 @@ func UpdatePage(res http.ResponseWriter, req *http.Request) {
 	metricType := parts[1]
 
 	match, err := regexp.MatchString("^\\w", parts[2])
-	if match == false && err == nil {
+	if !match && err == nil {
 		fmt.Println("метрика должна начинаться с буквы")
 		res.WriteHeader(http.StatusBadRequest)
 		return
