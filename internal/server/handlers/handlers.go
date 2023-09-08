@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"fmt"
+	"github.com/julienschmidt/httprouter"
 	"github.com/superles/yapmetrics/internal/memstorage"
 	"html/template"
 	"log"
@@ -11,10 +12,10 @@ import (
 	"strings"
 )
 
-func MainPage(res http.ResponseWriter, req *http.Request) {
+func MainPage(res http.ResponseWriter, req *http.Request, params httprouter.Params) {
 
 	if req.RequestURI != "/" {
-		UnknownPage(res, req)
+		UnknownPage(res, req, params)
 		return
 	}
 
@@ -53,12 +54,12 @@ func MainPage(res http.ResponseWriter, req *http.Request) {
 	check(err)
 }
 
-func UnknownPage(res http.ResponseWriter, req *http.Request) {
+func UnknownPage(res http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	res.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	res.WriteHeader(http.StatusBadRequest)
 }
 
-func UpdatePage(res http.ResponseWriter, req *http.Request) {
+func UpdatePage(res http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	res.Header().Set("Content-Type", "text/plain; charset=utf-8")
 
 	parts := strings.Split(strings.TrimLeft(strings.Trim(req.RequestURI, " "), "/"), "/")
@@ -107,7 +108,7 @@ func UpdatePage(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func ValuePage(res http.ResponseWriter, req *http.Request) {
+func ValuePage(res http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 
 	res.Header().Set("Content-Type", "text/plain; charset=utf-8")
 

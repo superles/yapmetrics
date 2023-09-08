@@ -2,16 +2,19 @@ package client
 
 import (
 	"errors"
+	"github.com/gojek/heimdall/v7/httpclient"
 	"log"
 	"net/http"
 )
 
-//func postHeimdall(url string) (*http.Response, error) {
-//	client := httpclient.NewClient()
-//	headers := http.Header{}
-//	headers.Set("Content-Type", "text/plain")
-//	return client.Post(url, nil, headers)
-//}
+const useHttp = true
+
+func postHeimdall(url string) (*http.Response, error) {
+	var client = httpclient.NewClient()
+	headers := http.Header{}
+	headers.Set("Content-Type", "text/plain")
+	return client.Post(url, nil, headers)
+}
 
 func postHTTP(url string) (*http.Response, error) {
 	client := http.Client{}
@@ -19,7 +22,11 @@ func postHTTP(url string) (*http.Response, error) {
 }
 
 func Send(url string) (bool, error) {
-	response, postErr := postHTTP(url)
+	post := postHeimdall
+	if useHttp {
+		post = postHTTP
+	}
+	response, postErr := post(url)
 	if postErr != nil {
 		return false, postErr
 	}
