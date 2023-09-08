@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-const useHttp = true
+const useHTTP = true
 
 func postHeimdall(url string) (*http.Response, error) {
 	var client = httpclient.NewClient()
@@ -23,7 +23,7 @@ func postHTTP(url string) (*http.Response, error) {
 
 func Send(url string) (bool, error) {
 	post := postHeimdall
-	if useHttp {
+	if useHTTP {
 		post = postHTTP
 	}
 	response, postErr := post(url)
