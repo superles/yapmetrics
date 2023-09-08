@@ -3,7 +3,7 @@ package types
 type Counter int64
 type Gauge float64
 
-type Metrics struct {
+type Metric struct {
 	Alloc         Gauge
 	BuckHashSys   Gauge
 	Frees         Gauge

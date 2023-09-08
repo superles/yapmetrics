@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"github.com/superles/yapmetrics/internal/memstorage"
 	"strconv"
 )
 
@@ -11,10 +12,18 @@ func gauge(name string, value string) (float64, error) {
 		return float64(0), errors.New("имя не должно быть пустым")
 	}
 
-	if v, err := strconv.ParseFloat(value, 64); err == nil {
-		return v, nil
-	} else {
+	v, err := strconv.ParseFloat(value, 64)
+
+	if err != nil {
 		return v, errors.New("значение должно быть float64")
 	}
+
+	memstorage.Storage.Add(memstorage.Metric{
+		Name:  name,
+		Type:  "gauge",
+		Value: value,
+	})
+
+	return v, nil
 
 }

@@ -3,20 +3,20 @@ package agent
 import (
 	"fmt"
 	"github.com/superles/yapmetrics/internal/agent/client"
+	"github.com/superles/yapmetrics/internal/agent/config"
+	"github.com/superles/yapmetrics/internal/storage"
 	"github.com/superles/yapmetrics/internal/types"
 	"math/rand"
 	"runtime"
 	"time"
 )
 
-const pollInterval = 2
-const reportInterval = 10
-const serverAddress = "http://localhost:8080"
-
-var metrics types.Metrics
+var pollCount = 0
 
 func capture() {
+	var metrics types.Metric
 	var stats runtime.MemStats
+	pollCount = pollCount + 1
 	runtime.ReadMemStats(&stats)
 	metrics.Alloc = types.Gauge(stats.Alloc)
 	metrics.BuckHashSys = types.Gauge(stats.BuckHashSys)
@@ -45,12 +45,14 @@ func capture() {
 	metrics.StackSys = types.Gauge(stats.StackSys)
 	metrics.Sys = types.Gauge(stats.Sys)
 	metrics.TotalAlloc = types.Gauge(stats.TotalAlloc)
-	metrics.PollCount = metrics.PollCount + 1
+	metrics.PollCount = types.Counter(pollCount)
 	metrics.RandomValue = types.Gauge(1000 + rand.Float64()*(1000-0))
+
+	storage.Store().Add(metrics)
 }
 
 func send(mName string, mType string, mValue string) {
-	url := serverAddress + "/update/" + mName + "/" + mType + "/" + mValue + ""
+	url := "http://" + config.AgentConfig.Endpoint + "/update/" + mType + "/" + mName + "/" + mValue + ""
 	_, err := client.Send(url)
 	if err != nil {
 		return
@@ -58,6 +60,8 @@ func send(mName string, mType string, mValue string) {
 }
 
 func sendAll() {
+	fmt.Println("sendAll")
+	metrics := storage.Store().Get()
 	send("Alloc", "gauge", fmt.Sprintf("%f", metrics.Alloc))
 	send("BuckHashSys", "gauge", fmt.Sprintf("%f", metrics.BuckHashSys))
 	send("Frees", "gauge", fmt.Sprintf("%f", metrics.Frees))
@@ -94,7 +98,7 @@ func sendAll() {
 func init() {
 	var stats runtime.MemStats
 	runtime.ReadMemStats(&stats)
-	metrics = types.Metrics{
+	metrics := types.Metric{
 		Alloc:         types.Gauge(stats.Alloc),
 		BuckHashSys:   types.Gauge(stats.BuckHashSys),
 		Frees:         types.Gauge(stats.Frees),
@@ -125,27 +129,24 @@ func init() {
 		PollCount:     types.Counter(1),
 		RandomValue:   types.Gauge(1),
 	}
+
+	storage.Store().Add(metrics)
 }
 
 func poolTick() {
-	for range time.Tick(time.Second * pollInterval) {
+	for range time.Tick(time.Duration(config.AgentConfig.PollInterval) * time.Second) {
 		fmt.Println("capture")
-
 		capture()
-	}
-}
-
-func reportTick() {
-	for range time.Tick(time.Second * reportInterval) {
-		sendAll()
 	}
 }
 
 func Run() {
 
-	go poolTick()
-	go reportTick()
-	//client.Send("http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>")
+	config.InitConfig()
 
-	time.Sleep(time.Second * reportInterval * 10)
+	go poolTick()
+
+	for range time.Tick(time.Second * time.Duration(config.AgentConfig.ReportInterval)) {
+		sendAll()
+	}
 }
