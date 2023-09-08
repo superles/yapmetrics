@@ -13,13 +13,13 @@ import (
 //	return client.Post(url, nil, headers)
 //}
 
-func postHttp(url string) (*http.Response, error) {
+func postHTTP(url string) (*http.Response, error) {
 	client := http.Client{}
 	return client.Post(url, "text/plain", nil)
 }
 
 func Send(url string) (bool, error) {
-	response, postErr := postHttp(url)
+	response, postErr := postHTTP(url)
 	if postErr != nil {
 		return false, postErr
 	}

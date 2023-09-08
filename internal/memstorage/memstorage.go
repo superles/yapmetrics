@@ -23,7 +23,7 @@ func (m *MemStorage) Add(doc Metric) {
 func (m *MemStorage) Get(name string) (Metric, error) {
 	val, ok := m.Collection[name]
 	if !ok {
-		return val, errors.New("Такая метрика отсутствует")
+		return val, errors.New("такая метрика отсутствует")
 	}
 	return m.Collection[name], nil
 }
