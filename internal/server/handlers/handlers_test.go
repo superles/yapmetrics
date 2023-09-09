@@ -1,11 +1,11 @@
 package handlers
 
 import (
-	"fmt"
 	"github.com/julienschmidt/httprouter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -41,12 +41,12 @@ func TestMainPage(t *testing.T) {
 			// проверяем код ответа
 			assert.Equal(t, res.StatusCode, test.want.code)
 			// получаем и проверяем тело запроса
-			defer func(Body io.ReadCloser) {
-				err := Body.Close()
+			defer func() {
+				err := res.Body.Close()
 				if err != nil {
-					fmt.Println(err.Error())
+					log.Fatal(err)
 				}
-			}(res.Body)
+			}()
 			_, err := io.ReadAll(res.Body)
 
 			require.NoError(t, err)
