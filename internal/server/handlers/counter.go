@@ -2,8 +2,7 @@ package handlers
 
 import (
 	"errors"
-	"fmt"
-	"github.com/superles/yapmetrics/internal/memstorage"
+	"github.com/superles/yapmetrics/internal/storage"
 	"strconv"
 )
 
@@ -19,25 +18,15 @@ func counter(name string, value string) (int64, error) {
 		return v, errors.New("значение должно быть int64")
 	}
 
-	metric, mErr := memstorage.Storage.Get(name)
+	oldValue := int64(0)
 
-	if mErr != nil {
-		memstorage.Storage.Add(memstorage.Metric{
-			Name:  name,
-			Type:  "counter",
-			Value: value,
-		})
-	} else {
-		metricValue, metricValueErr := strconv.ParseInt(metric.Value, 10, 64)
-		if metricValueErr != nil {
-			metricValue = 0
-		}
-		memstorage.Storage.Add(memstorage.Metric{
-			Name:  name,
-			Type:  "counter",
-			Value: fmt.Sprint(v + metricValue),
-		})
+	metric, mErr := storage.MetricRepository.Get(name)
+
+	if mErr == nil {
+		oldValue = metric.Value.(int64)
 	}
+
+	storage.MetricRepository.Set(name, "counter", v+oldValue)
 
 	return v, nil
 

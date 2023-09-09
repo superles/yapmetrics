@@ -1,15 +1,9 @@
 package storage
 
-import (
-	"github.com/superles/yapmetrics/internal/storage/repositories"
-)
+import "github.com/superles/yapmetrics/internal/storage/repository"
 
-var repo RepositoryInterface
+var MetricRepository = new(repository.MemoryMetricRepository)
 
 func init() {
-	repo = &repositories.MemoryRepository{}
-}
-
-func Store() RepositoryInterface {
-	return repo
+	MetricRepository = new(repository.MemoryMetricRepository)
 }

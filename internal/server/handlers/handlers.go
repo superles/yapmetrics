@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/julienschmidt/httprouter"
-	"github.com/superles/yapmetrics/internal/memstorage"
+	"github.com/superles/yapmetrics/internal/storage"
 	"html/template"
 	"log"
 	"net/http"
@@ -32,7 +32,11 @@ func MainPage(res http.ResponseWriter, req *http.Request, params httprouter.Para
 			{{range .}}    
 			  <tr>
 			  <td>{{.Name}}</td><td>
-			  <td>{{.Value  }}</td>
+			  {{if eq .Type "counter"}}
+			 	 <td>{{ printf "%d" .Value }}</td>
+			  {{else}}
+			 	 <td>{{ printf "%.2f" .Value }}</td>
+			  {{end}}
 			{{end}}
 		</table>
 	</body>
@@ -47,7 +51,7 @@ func MainPage(res http.ResponseWriter, req *http.Request, params httprouter.Para
 
 	check(err)
 
-	collection := memstorage.Storage.Collection
+	collection := storage.MetricRepository.GetAll()
 
 	err = t.Execute(res, collection)
 
@@ -140,7 +144,7 @@ func ValuePage(res http.ResponseWriter, req *http.Request, _ httprouter.Params) 
 		return
 	}
 
-	metric, metricError := memstorage.Storage.Get(metricName)
+	metric, metricError := storage.MetricRepository.Get(metricName)
 	if metricError != nil {
 		fmt.Println(metricError.Error())
 		res.WriteHeader(http.StatusNotFound)
@@ -153,7 +157,14 @@ func ValuePage(res http.ResponseWriter, req *http.Request, _ httprouter.Params) 
 		return
 	}
 
-	_, writeErr := res.Write([]byte(metric.Value))
+	var Value string
+	if metric.Type == "counter" {
+		Value = fmt.Sprintf("%d", metric.Value)
+	} else {
+		Value = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", metric.Value), "0"), ".")
+	}
+
+	_, writeErr := res.Write([]byte(Value))
 	if writeErr != nil {
 		return
 	}

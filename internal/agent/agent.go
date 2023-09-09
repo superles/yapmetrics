@@ -8,47 +8,48 @@ import (
 	"github.com/superles/yapmetrics/internal/types"
 	"math/rand"
 	"runtime"
+	"strings"
 	"time"
 )
 
 var pollCount = 0
 
-func capture() {
-	var metrics types.Metric
-	var stats runtime.MemStats
-	pollCount = pollCount + 1
-	runtime.ReadMemStats(&stats)
-	metrics.Alloc = types.Gauge(stats.Alloc)
-	metrics.BuckHashSys = types.Gauge(stats.BuckHashSys)
-	metrics.Frees = types.Gauge(stats.Frees)
-	metrics.GCCPUFraction = types.Gauge(stats.GCCPUFraction)
-	metrics.GCSys = types.Gauge(stats.GCSys)
-	metrics.HeapAlloc = types.Gauge(stats.HeapAlloc)
-	metrics.HeapIdle = types.Gauge(stats.HeapIdle)
-	metrics.HeapInuse = types.Gauge(stats.HeapInuse)
-	metrics.HeapObjects = types.Gauge(stats.HeapObjects)
-	metrics.HeapReleased = types.Gauge(stats.HeapReleased)
-	metrics.HeapSys = types.Gauge(stats.HeapSys)
-	metrics.LastGC = types.Gauge(stats.LastGC)
-	metrics.Lookups = types.Gauge(stats.Lookups)
-	metrics.MCacheInuse = types.Gauge(stats.MCacheInuse)
-	metrics.MCacheSys = types.Gauge(stats.MCacheSys)
-	metrics.MSpanInuse = types.Gauge(stats.MSpanInuse)
-	metrics.MSpanSys = types.Gauge(stats.MSpanSys)
-	metrics.Mallocs = types.Gauge(stats.Mallocs)
-	metrics.NextGC = types.Gauge(stats.NextGC)
-	metrics.NumForcedGC = types.Gauge(stats.NumForcedGC)
-	metrics.NumGC = types.Gauge(stats.NumGC)
-	metrics.OtherSys = types.Gauge(stats.OtherSys)
-	metrics.PauseTotalNs = types.Gauge(stats.PauseTotalNs)
-	metrics.StackInuse = types.Gauge(stats.StackInuse)
-	metrics.StackSys = types.Gauge(stats.StackSys)
-	metrics.Sys = types.Gauge(stats.Sys)
-	metrics.TotalAlloc = types.Gauge(stats.TotalAlloc)
-	metrics.PollCount = types.Counter(pollCount)
-	metrics.RandomValue = types.Gauge(1000 + rand.Float64()*(1000-0))
+func formatFloat(gauge interface{}) string {
+	return strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", gauge), "0"), ".")
+}
 
-	storage.Store().Add(metrics)
+func capture(count int) {
+	var stats runtime.MemStats
+	runtime.ReadMemStats(&stats)
+	storage.MetricRepository.Set("Alloc", "gauge", types.Gauge(stats.Alloc))
+	storage.MetricRepository.Set("BuckHashSys", "gauge", types.Gauge(stats.BuckHashSys))
+	storage.MetricRepository.Set("Frees", "gauge", types.Gauge(stats.Frees))
+	storage.MetricRepository.Set("GCCPUFraction", "gauge", types.Gauge(stats.GCCPUFraction))
+	storage.MetricRepository.Set("GCSys", "gauge", types.Gauge(stats.GCSys))
+	storage.MetricRepository.Set("HeapAlloc", "gauge", types.Gauge(stats.HeapAlloc))
+	storage.MetricRepository.Set("HeapIdle", "gauge", types.Gauge(stats.HeapIdle))
+	storage.MetricRepository.Set("HeapInuse", "gauge", types.Gauge(stats.HeapInuse))
+	storage.MetricRepository.Set("HeapObjects", "gauge", types.Gauge(stats.HeapObjects))
+	storage.MetricRepository.Set("HeapReleased", "gauge", types.Gauge(stats.HeapReleased))
+	storage.MetricRepository.Set("HeapSys", "gauge", types.Gauge(stats.HeapSys))
+	storage.MetricRepository.Set("LastGC", "gauge", types.Gauge(stats.LastGC))
+	storage.MetricRepository.Set("Lookups", "gauge", types.Gauge(stats.Lookups))
+	storage.MetricRepository.Set("MCacheInuse", "gauge", types.Gauge(stats.MCacheInuse))
+	storage.MetricRepository.Set("MCacheSys", "gauge", types.Gauge(stats.MCacheSys))
+	storage.MetricRepository.Set("MSpanInuse", "gauge", types.Gauge(stats.MSpanInuse))
+	storage.MetricRepository.Set("MSpanSys", "gauge", types.Gauge(stats.MSpanSys))
+	storage.MetricRepository.Set("Mallocs", "gauge", types.Gauge(stats.Mallocs))
+	storage.MetricRepository.Set("NextGC", "gauge", types.Gauge(stats.NextGC))
+	storage.MetricRepository.Set("NumForcedGC", "gauge", types.Gauge(stats.NumForcedGC))
+	storage.MetricRepository.Set("NumGC", "gauge", types.Gauge(stats.NumGC))
+	storage.MetricRepository.Set("OtherSys", "gauge", types.Gauge(stats.OtherSys))
+	storage.MetricRepository.Set("PauseTotalNs", "gauge", types.Gauge(stats.PauseTotalNs))
+	storage.MetricRepository.Set("StackInuse", "gauge", types.Gauge(stats.StackInuse))
+	storage.MetricRepository.Set("StackSys", "gauge", types.Gauge(stats.StackSys))
+	storage.MetricRepository.Set("Sys", "gauge", types.Gauge(stats.Sys))
+	storage.MetricRepository.Set("TotalAlloc", "gauge", types.Gauge(stats.TotalAlloc))
+	storage.MetricRepository.Set("RandomValue", "gauge", types.Gauge(1000+rand.Float64()*(1000-0)))
+	storage.MetricRepository.Set("PollCount", "counter", types.Counter(count))
 }
 
 func send(mName string, mType string, mValue string) {
@@ -61,82 +62,27 @@ func send(mName string, mType string, mValue string) {
 
 func sendAll() {
 	fmt.Println("sendAll")
-	metrics := storage.Store().Get()
-	send("Alloc", "gauge", fmt.Sprintf("%f", metrics.Alloc))
-	send("BuckHashSys", "gauge", fmt.Sprintf("%f", metrics.BuckHashSys))
-	send("Frees", "gauge", fmt.Sprintf("%f", metrics.Frees))
-	send("GCCPUFraction", "gauge", fmt.Sprintf("%f", metrics.GCCPUFraction))
-	send("GCSys", "gauge", fmt.Sprintf("%f", metrics.GCSys))
-	send("HeapAlloc", "gauge", fmt.Sprintf("%f", metrics.HeapAlloc))
-	send("HeapIdle", "gauge", fmt.Sprintf("%f", metrics.HeapIdle))
-	send("HeapInuse", "gauge", fmt.Sprintf("%f", metrics.HeapInuse))
-	send("HeapObjects", "gauge", fmt.Sprintf("%f", metrics.HeapObjects))
-	send("HeapReleased", "gauge", fmt.Sprintf("%f", metrics.HeapReleased))
-	send("HeapSys", "gauge", fmt.Sprintf("%f", metrics.HeapSys))
-	send("LastGC", "gauge", fmt.Sprintf("%f", metrics.LastGC))
-	send("Lookups", "gauge", fmt.Sprintf("%f", metrics.Lookups))
-	send("MCacheInuse", "gauge", fmt.Sprintf("%f", metrics.MCacheInuse))
-	send("MCacheSys", "gauge", fmt.Sprintf("%f", metrics.MCacheSys))
-	send("MSpanInuse", "gauge", fmt.Sprintf("%f", metrics.MSpanInuse))
-	send("MSpanSys", "gauge", fmt.Sprintf("%f", metrics.MSpanSys))
-	send("Mallocs", "gauge", fmt.Sprintf("%f", metrics.Mallocs))
-	send("NextGC", "gauge", fmt.Sprintf("%f", metrics.NextGC))
-	send("NumForcedGC", "gauge", fmt.Sprintf("%f", metrics.NumForcedGC))
-	send("NumGC", "gauge", fmt.Sprintf("%f", metrics.NumGC))
-	send("OtherSys", "gauge", fmt.Sprintf("%f", metrics.OtherSys))
-	send("PauseTotalNs", "gauge", fmt.Sprintf("%f", metrics.PauseTotalNs))
-	send("StackInuse", "gauge", fmt.Sprintf("%f", metrics.StackInuse))
-	send("StackSys", "gauge", fmt.Sprintf("%f", metrics.StackSys))
-	send("Sys", "gauge", fmt.Sprintf("%f", metrics.Sys))
-	send("TotalAlloc", "gauge", fmt.Sprintf("%f", metrics.TotalAlloc))
-	send("TotalAlloc", "gauge", fmt.Sprintf("%f", metrics.TotalAlloc))
-	send("TotalAlloc", "gauge", fmt.Sprintf("%f", metrics.TotalAlloc))
-	send("RandomValue", "gauge", fmt.Sprintf("%f", metrics.RandomValue))
-	send("PollCount", "counter", fmt.Sprintf("%d", metrics.PollCount))
+
+	metrics := storage.MetricRepository.GetAll()
+
+	for Name, Item := range metrics {
+		if Item.Type == "counter" {
+			send(Name, Item.Type, fmt.Sprintf("%d", Item.Value))
+		} else {
+			send(Name, Item.Type, formatFloat(Item.Value))
+		}
+	}
 }
 
 func init() {
-	var stats runtime.MemStats
-	runtime.ReadMemStats(&stats)
-	metrics := types.Metric{
-		Alloc:         types.Gauge(stats.Alloc),
-		BuckHashSys:   types.Gauge(stats.BuckHashSys),
-		Frees:         types.Gauge(stats.Frees),
-		GCCPUFraction: types.Gauge(stats.GCCPUFraction),
-		GCSys:         types.Gauge(stats.GCSys),
-		HeapAlloc:     types.Gauge(stats.HeapAlloc),
-		HeapIdle:      types.Gauge(stats.HeapIdle),
-		HeapInuse:     types.Gauge(stats.HeapInuse),
-		HeapObjects:   types.Gauge(stats.HeapObjects),
-		HeapReleased:  types.Gauge(stats.HeapReleased),
-		HeapSys:       types.Gauge(stats.HeapSys),
-		LastGC:        types.Gauge(stats.LastGC),
-		Lookups:       types.Gauge(stats.Lookups),
-		MCacheInuse:   types.Gauge(stats.MCacheInuse),
-		MCacheSys:     types.Gauge(stats.MCacheSys),
-		MSpanInuse:    types.Gauge(stats.MSpanInuse),
-		MSpanSys:      types.Gauge(stats.MSpanSys),
-		Mallocs:       types.Gauge(stats.Mallocs),
-		NextGC:        types.Gauge(stats.NextGC),
-		NumForcedGC:   types.Gauge(stats.NumForcedGC),
-		NumGC:         types.Gauge(stats.NumGC),
-		OtherSys:      types.Gauge(stats.OtherSys),
-		PauseTotalNs:  types.Gauge(stats.PauseTotalNs),
-		StackInuse:    types.Gauge(stats.StackInuse),
-		StackSys:      types.Gauge(stats.StackSys),
-		Sys:           types.Gauge(stats.Sys),
-		TotalAlloc:    types.Gauge(stats.TotalAlloc),
-		PollCount:     types.Counter(1),
-		RandomValue:   types.Gauge(1),
-	}
-
-	storage.Store().Add(metrics)
+	capture(0)
 }
 
 func poolTick() {
 	for range time.Tick(time.Duration(config.AgentConfig.PollInterval) * time.Second) {
 		fmt.Println("capture")
-		capture()
+		pollCount = pollCount + 1
+		capture(pollCount)
 	}
 }
 
