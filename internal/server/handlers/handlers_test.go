@@ -5,7 +5,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -38,15 +37,12 @@ func TestMainPage(t *testing.T) {
 			MainPage(w, request, httprouter.Params{})
 
 			res := w.Result()
+			bodyCloseError := res.Body.Close()
+			require.NoError(t, bodyCloseError)
 			// проверяем код ответа
 			assert.Equal(t, res.StatusCode, test.want.code)
 			// получаем и проверяем тело запроса
-			defer func() {
-				err := res.Body.Close()
-				if err != nil {
-					log.Fatal(err)
-				}
-			}()
+
 			_, err := io.ReadAll(res.Body)
 
 			require.NoError(t, err)
