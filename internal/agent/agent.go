@@ -102,7 +102,6 @@ func Run() {
 		err := sendAll()
 		if err != nil {
 			log.Fatal(err.Error())
-			return
 		}
 	}
 }
