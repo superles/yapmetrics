@@ -6,7 +6,6 @@ import (
 	"github.com/superles/yapmetrics/internal/agent/config"
 	"github.com/superles/yapmetrics/internal/storage"
 	"github.com/superles/yapmetrics/internal/types"
-	"log"
 	"math/rand"
 	"runtime"
 	"strings"
@@ -99,9 +98,6 @@ func Run() {
 	go poolTick()
 
 	for range time.Tick(time.Second * time.Duration(config.AgentConfig.ReportInterval)) {
-		err := sendAll()
-		if err != nil {
-			log.Fatal(err.Error())
-		}
+		sendAll()
 	}
 }
