@@ -126,7 +126,7 @@ func ValuePage(res http.ResponseWriter, req *http.Request, _ httprouter.Params) 
 	metricType := parts[1]
 	metricName := parts[2]
 	if metricType != "counter" && metricType != "gauge" {
-		fmt.Println("метрика должна начинаться с буквы")
+		fmt.Println("неверный тип метрики")
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -145,14 +145,13 @@ func ValuePage(res http.ResponseWriter, req *http.Request, _ httprouter.Params) 
 	}
 
 	metric, metricError := storage.MetricRepository.Get(metricName)
+
 	if metricError != nil {
 		fmt.Println(metricError.Error())
 		res.WriteHeader(http.StatusNotFound)
 		return
-	}
-
-	if metric.Type != metricType {
-		fmt.Println(errors.New("тип метрики не совпадает"))
+	} else if metric.Type != metricType {
+		fmt.Println(errors.New("тип метрики не совпадает"), metric)
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -164,9 +163,10 @@ func ValuePage(res http.ResponseWriter, req *http.Request, _ httprouter.Params) 
 		Value = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", metric.Value), "0"), ".")
 	}
 
+	res.WriteHeader(http.StatusOK)
 	_, writeErr := res.Write([]byte(Value))
 	if writeErr != nil {
 		return
 	}
-	res.WriteHeader(http.StatusOK)
+
 }

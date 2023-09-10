@@ -1,8 +1,14 @@
 package config
 
+var isInit bool = false
+
 var AgentConfig Config
 
 func InitConfig() {
+
+	if isInit {
+		return
+	}
 
 	flagConfig := parseFlags()
 	envConfig := parseEnv()
@@ -24,4 +30,6 @@ func InitConfig() {
 	} else {
 		AgentConfig.PollInterval = flagConfig.PollInterval
 	}
+
+	isInit = true
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/superles/yapmetrics/internal/agent/config"
 	"github.com/superles/yapmetrics/internal/storage"
 	"github.com/superles/yapmetrics/internal/types"
+	"log"
 	"math/rand"
 	"runtime"
 	"strings"
@@ -52,26 +53,31 @@ func capture(count int) {
 	storage.MetricRepository.Set("PollCount", "counter", types.Counter(count))
 }
 
-func send(mName string, mType string, mValue string) {
+func send(mName string, mType string, mValue string) error {
 	url := "http://" + config.AgentConfig.Endpoint + "/update/" + mType + "/" + mName + "/" + mValue + ""
 	_, err := client.Send(url)
-	if err != nil {
-		return
-	}
+	return err
 }
 
-func sendAll() {
+func sendAll() error {
 	fmt.Println("sendAll")
 
 	metrics := storage.MetricRepository.GetAll()
 
 	for Name, Item := range metrics {
 		if Item.Type == "counter" {
-			send(Name, Item.Type, fmt.Sprintf("%d", Item.Value))
+			err := send(Name, Item.Type, fmt.Sprintf("%d", Item.Value))
+			if err != nil {
+				return err
+			}
 		} else {
-			send(Name, Item.Type, formatFloat(Item.Value))
+			err := send(Name, Item.Type, formatFloat(Item.Value))
+			if err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
 
 func init() {
@@ -93,6 +99,10 @@ func Run() {
 	go poolTick()
 
 	for range time.Tick(time.Second * time.Duration(config.AgentConfig.ReportInterval)) {
-		sendAll()
+		err := sendAll()
+		if err != nil {
+			log.Fatal(err.Error())
+			return
+		}
 	}
 }
