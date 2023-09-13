@@ -1,5 +1,13 @@
 package storage
 
-import "github.com/superles/yapmetrics/internal/storage/repository"
+import types "github.com/superles/yapmetrics/internal/metric"
 
-var MetricRepository = new(repository.MemoryMetricRepository)
+type Counter int64
+type Gauge float64
+
+type Storage interface {
+	GetAll() map[string]types.Metric
+	Get(name string) (types.Metric, error)
+	SetFloat(Name string, Value float64)
+	IncCounter(Name string, Value int64)
+}

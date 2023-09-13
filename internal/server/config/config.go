@@ -1,8 +1,8 @@
 package config
 
-var ServerConfig Config
+func Load() *Config {
 
-func InitConfig() {
+	var ServerConfig Config
 
 	flagConfig := parseFlags()
 	envConfig := parseEnv()
@@ -12,4 +12,6 @@ func InitConfig() {
 	} else {
 		ServerConfig.Endpoint = flagConfig.Endpoint
 	}
+
+	return &ServerConfig
 }

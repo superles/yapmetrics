@@ -2,8 +2,10 @@ package main
 
 import (
 	"github.com/superles/yapmetrics/internal/agent"
+	"github.com/superles/yapmetrics/internal/storage/memstorage"
 )
 
 func main() {
-	agent.Run()
+	storage := memstorage.New()
+	agent.New(storage).Run()
 }

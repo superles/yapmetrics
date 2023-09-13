@@ -1,26 +1,46 @@
 package server
 
 import (
-	"github.com/julienschmidt/httprouter"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/superles/yapmetrics/internal/server/config"
-	pages "github.com/superles/yapmetrics/internal/server/handlers"
+	"github.com/superles/yapmetrics/internal/storage"
+	"log"
 	"net/http"
 )
 
-func Run() {
+type Server struct {
+	Storage storage.Storage
+	Router  *chi.Mux
+	Config  *config.Config
+}
 
-	config.InitConfig()
+func New(s storage.Storage) *Server {
+	router := chi.NewRouter()
+	router.Use(middleware.Logger)
+	server := &Server{Storage: s, Router: router}
+	server.registerRoutes()
+	server.loadConfig()
+	return server
+}
 
-	router := httprouter.New()
+func (s *Server) registerRoutes() {
+	s.Router.Post("/update/counter/{name}/{value}", s.UpdateCounter)
+	s.Router.Post("/update/gauge/{name}/{value}", s.UpdateGauge)
+	s.Router.Get("/update/counter/{name}/{value}", s.UpdateCounter)
+	s.Router.Get("/update/gauge/{name}/{value}", s.UpdateGauge)
+	s.Router.Post("/update/{type}/{name}/{value}", s.BadRequest)
+	s.Router.Get("/value/{type}/{name}", s.GetValue)
+	s.Router.Get("/", s.MainPage)
+}
 
-	router.POST(`/update/:type/:name/:value`, pages.UpdatePage)
-	//для тестов
-	router.GET(`/update/:type/:name/:value`, pages.UpdatePage)
-	router.GET(`/value/:type/:name`, pages.ValuePage)
-	router.GET(`/`, pages.MainPage)
+func (s *Server) loadConfig() {
+	s.Config = config.Load()
+}
 
-	err := http.ListenAndServe(config.ServerConfig.Endpoint, router)
-	if err != nil {
-		panic(err)
+func (s *Server) Run() {
+
+	if err := http.ListenAndServe(s.Config.Endpoint, s.Router); err != nil {
+		log.Fatalf("не могу запустить сервер: %s", err)
 	}
 }
