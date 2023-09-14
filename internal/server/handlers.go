@@ -95,16 +95,19 @@ func (s *Server) GetValue(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
+		return
 	}
 
 	if metric.Type != mType {
 		fmt.Println(errors.New("тип метрики не совпадает"), metric)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "тип метрики не совпадает", http.StatusBadRequest)
+		return
 	}
 
 	value, err := metric.String()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)

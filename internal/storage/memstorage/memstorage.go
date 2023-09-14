@@ -54,3 +54,13 @@ func (s *MemStorage) IncCounter(Name string, Value int64) {
 	val.ValueInt = val.ValueInt + Value
 	s.collection[Name] = val
 }
+
+func (s *MemStorage) SetInt(Name string, Value int64) {
+	storageSync.Lock()
+	defer storageSync.Unlock()
+	val := s.collection[Name]
+	val.Name = Name
+	val.Type = types.CounterMetricTypeName
+	val.ValueInt = Value
+	s.collection[Name] = val
+}

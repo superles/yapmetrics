@@ -11,8 +11,6 @@ import (
 	"time"
 )
 
-var pollCount = 0
-
 type Agent struct {
 	Storage storage.Storage
 	Config  *config.Config
@@ -27,7 +25,7 @@ func (a *Agent) formatFloat(gauge interface{}) string {
 	return strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", gauge), "0"), ".")
 }
 
-func (a *Agent) capture(count int) {
+func (a *Agent) capture(count int64) {
 	var stats runtime.MemStats
 	runtime.ReadMemStats(&stats)
 	a.Storage.SetFloat("Alloc", float64(stats.Alloc))
@@ -58,7 +56,7 @@ func (a *Agent) capture(count int) {
 	a.Storage.SetFloat("Sys", float64(stats.Sys))
 	a.Storage.SetFloat("TotalAlloc", float64(stats.TotalAlloc))
 	a.Storage.SetFloat("RandomValue", 1000+rand.Float64()*(1000-0))
-	a.Storage.IncCounter("PollCount", int64(count))
+	a.Storage.IncCounter("PollCount", count)
 }
 
 func (a *Agent) send(mName string, mType string, mValue string) error {
@@ -88,8 +86,7 @@ func (a *Agent) sendAll() error {
 func (a *Agent) poolTick() {
 	for range time.Tick(time.Duration(a.Config.PollInterval) * time.Second) {
 		fmt.Println("capture")
-		pollCount = pollCount + 1
-		a.capture(pollCount)
+		a.capture(1)
 	}
 }
 
