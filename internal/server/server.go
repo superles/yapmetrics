@@ -18,9 +18,9 @@ type Server struct {
 func New(s storage.Storage) *Server {
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
-	server := &Server{Storage: s, Router: router}
+	cfg := config.New()
+	server := &Server{Storage: s, Router: router, Config: cfg}
 	server.registerRoutes()
-	server.loadConfig()
 	return server
 }
 
@@ -32,10 +32,6 @@ func (s *Server) registerRoutes() {
 	s.Router.Post("/update/{type}/{name}/{value}", s.BadRequest)
 	s.Router.Get("/value/{type}/{name}", s.GetValue)
 	s.Router.Get("/", s.MainPage)
-}
-
-func (s *Server) loadConfig() {
-	s.Config = config.New()
 }
 
 func (s *Server) Run() {

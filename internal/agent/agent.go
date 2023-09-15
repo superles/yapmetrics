@@ -7,7 +7,6 @@ import (
 	"github.com/superles/yapmetrics/internal/storage"
 	"math/rand"
 	"runtime"
-	"strings"
 	"time"
 )
 
@@ -19,10 +18,6 @@ type Agent struct {
 func New(s storage.Storage) *Agent {
 	agent := &Agent{Storage: s, Config: config.New()}
 	return agent
-}
-
-func (a *Agent) formatFloat(gauge interface{}) string {
-	return strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", gauge), "0"), ".")
 }
 
 func (a *Agent) capture(count int64) {
