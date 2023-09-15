@@ -17,7 +17,7 @@ type Agent struct {
 }
 
 func New(s storage.Storage) *Agent {
-	agent := &Agent{Storage: s, Config: config.Load()}
+	agent := &Agent{Storage: s, Config: config.New()}
 	return agent
 }
 

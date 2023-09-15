@@ -35,7 +35,7 @@ func (s *Server) registerRoutes() {
 }
 
 func (s *Server) loadConfig() {
-	s.Config = config.Load()
+	s.Config = config.New()
 }
 
 func (s *Server) Run() {

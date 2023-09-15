@@ -1,17 +1,31 @@
 package config
 
-func Load() *Config {
+import "sync"
 
-	var ServerConfig Config
+type Config struct {
+	Endpoint string `env:"ADDRESS"`
+}
 
-	flagConfig := parseFlags()
-	envConfig := parseEnv()
+var (
+	once     sync.Once
+	instance Config
+)
 
-	if len(envConfig.Endpoint) > 0 {
-		ServerConfig.Endpoint = envConfig.Endpoint
-	} else {
-		ServerConfig.Endpoint = flagConfig.Endpoint
-	}
+func New() *Config {
 
-	return &ServerConfig
+	once.Do(func() {
+
+		instance = Config{}
+
+		flagConfig := parseFlags()
+		envConfig := parseEnv()
+
+		if len(envConfig.Endpoint) > 0 {
+			instance.Endpoint = envConfig.Endpoint
+		} else {
+			instance.Endpoint = flagConfig.Endpoint
+		}
+	})
+
+	return &instance
 }

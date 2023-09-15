@@ -1,29 +1,45 @@
 package config
 
-func Load() *Config {
+import "sync"
 
-	var AgentConfig Config
+type Config struct {
+	Endpoint       string `env:"ADDRESS"`
+	ReportInterval int    `env:"REPORT_INTERVAL"`
+	PollInterval   int    `env:"POLL_INTERVAL"`
+}
 
-	flagConfig := parseFlags()
-	envConfig := parseEnv()
+var (
+	once     sync.Once
+	instance Config
+)
 
-	if len(envConfig.Endpoint) > 0 {
-		AgentConfig.Endpoint = envConfig.Endpoint
-	} else {
-		AgentConfig.Endpoint = flagConfig.Endpoint
-	}
+func New() *Config {
 
-	if envConfig.ReportInterval > 0 {
-		AgentConfig.ReportInterval = envConfig.ReportInterval
-	} else {
-		AgentConfig.ReportInterval = flagConfig.ReportInterval
-	}
+	once.Do(func() {
 
-	if envConfig.PollInterval > 0 {
-		AgentConfig.PollInterval = envConfig.PollInterval
-	} else {
-		AgentConfig.PollInterval = flagConfig.PollInterval
-	}
+		instance = Config{}
 
-	return &AgentConfig
+		flagConfig := parseFlags()
+		envConfig := parseEnv()
+
+		if len(envConfig.Endpoint) > 0 {
+			instance.Endpoint = envConfig.Endpoint
+		} else {
+			instance.Endpoint = flagConfig.Endpoint
+		}
+
+		if envConfig.ReportInterval > 0 {
+			instance.ReportInterval = envConfig.ReportInterval
+		} else {
+			instance.ReportInterval = flagConfig.ReportInterval
+		}
+
+		if envConfig.PollInterval > 0 {
+			instance.PollInterval = envConfig.PollInterval
+		} else {
+			instance.PollInterval = flagConfig.PollInterval
+		}
+	})
+
+	return &instance
 }
