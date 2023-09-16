@@ -3,19 +3,26 @@ package server
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	types "github.com/superles/yapmetrics/internal/metric"
 	"github.com/superles/yapmetrics/internal/server/config"
-	"github.com/superles/yapmetrics/internal/storage"
 	"log"
 	"net/http"
 )
 
+type metricProvider interface {
+	GetAll() map[string]types.Metric
+	Get(name string) (types.Metric, error)
+	SetFloat(Name string, Value float64)
+	IncCounter(Name string, Value int64)
+}
+
 type Server struct {
-	Storage storage.Storage
+	Storage metricProvider
 	Router  *chi.Mux
 	Config  *config.Config
 }
 
-func New(s storage.Storage) *Server {
+func New(s metricProvider) *Server {
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	cfg := config.New()

@@ -4,23 +4,30 @@ import (
 	"fmt"
 	"github.com/superles/yapmetrics/internal/agent/client"
 	"github.com/superles/yapmetrics/internal/agent/config"
-	"github.com/superles/yapmetrics/internal/storage"
+	types "github.com/superles/yapmetrics/internal/metric"
 	"math/rand"
 	"runtime"
 	"time"
 )
 
+type metricProvider interface {
+	GetAll() map[string]types.Metric
+	Get(name string) (types.Metric, error)
+	SetFloat(Name string, Value float64)
+	IncCounter(Name string, Value int64)
+}
+
 type Agent struct {
-	Storage storage.Storage
+	Storage metricProvider
 	Config  *config.Config
 }
 
-func New(s storage.Storage) *Agent {
+func New(s metricProvider) *Agent {
 	agent := &Agent{Storage: s, Config: config.New()}
 	return agent
 }
 
-func (a *Agent) capture(count int64) {
+func (a *Agent) capture() {
 	var stats runtime.MemStats
 	runtime.ReadMemStats(&stats)
 	a.Storage.SetFloat("Alloc", float64(stats.Alloc))
@@ -51,7 +58,7 @@ func (a *Agent) capture(count int64) {
 	a.Storage.SetFloat("Sys", float64(stats.Sys))
 	a.Storage.SetFloat("TotalAlloc", float64(stats.TotalAlloc))
 	a.Storage.SetFloat("RandomValue", 1000+rand.Float64()*(1000-0))
-	a.Storage.IncCounter("PollCount", count)
+	a.Storage.IncCounter("PollCount", 1)
 }
 
 func (a *Agent) send(mName string, mType string, mValue string) error {
@@ -81,13 +88,13 @@ func (a *Agent) sendAll() error {
 func (a *Agent) poolTick() {
 	for range time.Tick(time.Duration(a.Config.PollInterval) * time.Second) {
 		fmt.Println("capture")
-		a.capture(1)
+		a.capture()
 	}
 }
 
 func (a *Agent) Run() {
 
-	a.capture(0)
+	a.capture()
 
 	go a.poolTick()
 
