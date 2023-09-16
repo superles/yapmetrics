@@ -12,7 +12,6 @@ import (
 
 type metricProvider interface {
 	GetAll() map[string]types.Metric
-	Get(name string) (types.Metric, error)
 	SetFloat(Name string, Value float64)
 	IncCounter(Name string, Value int64)
 }
