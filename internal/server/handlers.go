@@ -44,7 +44,7 @@ func (s *Server) MainPage(res http.ResponseWriter, req *http.Request) {
 
 	check(err)
 
-	collection := s.Storage.GetAll()
+	collection := s.storage.GetAll()
 
 	err = t.Execute(res, collection)
 
@@ -66,7 +66,7 @@ func (s *Server) UpdateGauge(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, fmt.Sprintf("cannot parse gauge metric: %s", err), http.StatusBadRequest)
 	}
-	s.Storage.SetFloat(name, floatVar)
+	s.storage.SetFloat(name, floatVar)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -80,7 +80,7 @@ func (s *Server) UpdateCounter(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, fmt.Sprintf("cannot parse counter metric: %s", err), http.StatusBadRequest)
 	}
-	s.Storage.IncCounter(name, intVar)
+	s.storage.IncCounter(name, intVar)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -91,7 +91,7 @@ func (s *Server) GetValue(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	mType := chi.URLParam(r, "type")
 
-	metric, err := s.Storage.Get(name)
+	metric, err := s.storage.Get(name)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)

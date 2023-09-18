@@ -13,7 +13,7 @@ func TestServer_GetValue(t *testing.T) {
 
 	repo := memstorage.New()
 	serv := New(repo)
-	ts := httptest.NewServer(serv.Router)
+	ts := httptest.NewServer(serv.router)
 	defer ts.Close()
 
 	type want struct {
@@ -51,7 +51,7 @@ func TestServer_UpdateCounter(t *testing.T) {
 
 	repo := memstorage.New()
 	serv := New(repo)
-	ts := httptest.NewServer(serv.Router)
+	ts := httptest.NewServer(serv.router)
 	defer ts.Close()
 
 	type want struct {

@@ -17,33 +17,33 @@ type metricProvider interface {
 }
 
 type Server struct {
-	Storage metricProvider
-	Router  *chi.Mux
-	Config  *config.Config
+	storage metricProvider
+	router  *chi.Mux
+	config  *config.Config
 }
 
 func New(s metricProvider) *Server {
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	cfg := config.New()
-	server := &Server{Storage: s, Router: router, Config: cfg}
+	server := &Server{storage: s, router: router, config: cfg}
 	server.registerRoutes()
 	return server
 }
 
 func (s *Server) registerRoutes() {
-	s.Router.Post("/update/counter/{name}/{value}", s.UpdateCounter)
-	s.Router.Post("/update/gauge/{name}/{value}", s.UpdateGauge)
-	s.Router.Get("/update/counter/{name}/{value}", s.UpdateCounter)
-	s.Router.Get("/update/gauge/{name}/{value}", s.UpdateGauge)
-	s.Router.Post("/update/{type}/{name}/{value}", s.BadRequest)
-	s.Router.Get("/value/{type}/{name}", s.GetValue)
-	s.Router.Get("/", s.MainPage)
+	s.router.Post("/update/counter/{name}/{value}", s.UpdateCounter)
+	s.router.Post("/update/gauge/{name}/{value}", s.UpdateGauge)
+	s.router.Get("/update/counter/{name}/{value}", s.UpdateCounter)
+	s.router.Get("/update/gauge/{name}/{value}", s.UpdateGauge)
+	s.router.Post("/update/{type}/{name}/{value}", s.BadRequest)
+	s.router.Get("/value/{type}/{name}", s.GetValue)
+	s.router.Get("/", s.MainPage)
 }
 
 func (s *Server) Run() {
 
-	if err := http.ListenAndServe(s.Config.Endpoint, s.Router); err != nil {
+	if err := http.ListenAndServe(s.config.Endpoint, s.router); err != nil {
 		log.Fatalf("не могу запустить сервер: %s", err)
 	}
 }
