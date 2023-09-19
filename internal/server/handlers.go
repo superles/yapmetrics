@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-chi/chi/v5"
+	"github.com/superles/yapmetrics/internal/metric"
 	"html/template"
 	"log"
 	"net/http"
@@ -91,20 +92,23 @@ func (s *Server) GetValue(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	mType := chi.URLParam(r, "type")
 
-	metric, err := s.storage.Get(name)
+	metricItem, err := s.storage.Get(name)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
-	if metric.Type != mType {
-		fmt.Println(errors.New("тип метрики не совпадает"), metric)
+	metricType, metricTypeError := metric.StringToType(mType)
+
+	if metricTypeError != nil || metricItem.Type != metricType {
+		fmt.Println(errors.New("тип метрики не совпадает"), metricItem)
 		http.Error(w, "тип метрики не совпадает", http.StatusBadRequest)
 		return
 	}
 
-	value, err := metric.String()
+	value, err := metricItem.String()
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

@@ -11,6 +11,5 @@ type Storage interface {
 	GetAll() map[string]types.Metric
 	Get(name string) (types.Metric, error)
 	SetFloat(Name string, Value float64)
-	SetInt(Name string, Value int64)
 	IncCounter(Name string, Value int64)
 }

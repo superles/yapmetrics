@@ -60,8 +60,9 @@ func (a *Agent) capture() {
 	a.storage.IncCounter("PollCount", 1)
 }
 
-func (a *Agent) send(mName string, mType string, mValue string) error {
-	url := "http://" + a.config.Endpoint + "/update/" + mType + "/" + mName + "/" + mValue + ""
+func (a *Agent) send(mName string, mType int, mValue string) error {
+	typeStr, _ := types.TypeToString(mType)
+	url := "http://" + a.config.Endpoint + "/update/" + typeStr + "/" + mName + "/" + mValue + ""
 	_, err := client.Send(url)
 	return err
 }

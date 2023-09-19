@@ -42,7 +42,7 @@ func (s *MemStorage) Get(name string) (types.Metric, error) {
 func (s *MemStorage) SetFloat(Name string, Value float64) {
 	storageSync.Lock()
 	defer storageSync.Unlock()
-	s.collection[Name] = types.Metric{Name: Name, Type: types.GaugeMetricTypeName, ValueFloat: Value}
+	s.collection[Name] = types.Metric{Name: Name, Type: types.GaugeMetricType, Value: Value}
 }
 
 func (s *MemStorage) IncCounter(Name string, Value int64) {
@@ -50,17 +50,7 @@ func (s *MemStorage) IncCounter(Name string, Value int64) {
 	defer storageSync.Unlock()
 	val := s.collection[Name]
 	val.Name = Name
-	val.Type = types.CounterMetricTypeName
-	val.ValueInt = val.ValueInt + Value
-	s.collection[Name] = val
-}
-
-func (s *MemStorage) SetInt(Name string, Value int64) {
-	storageSync.Lock()
-	defer storageSync.Unlock()
-	val := s.collection[Name]
-	val.Name = Name
-	val.Type = types.CounterMetricTypeName
-	val.ValueInt = Value
+	val.Type = types.CounterMetricType
+	val.Value = val.Value + float64(Value)
 	s.collection[Name] = val
 }

@@ -23,10 +23,9 @@ func TestMemStorage_GetAll(t *testing.T) {
 			"test empty negative #2",
 			map[string]types.Metric{
 				"test": {
-					Name:       "test",
-					Type:       "counter",
-					ValueInt:   int64(0),
-					ValueFloat: float64(0),
+					Name:  "test",
+					Type:  types.CounterMetricType,
+					Value: float64(0),
 				},
 			},
 			map[string]types.Metric{},

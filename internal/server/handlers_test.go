@@ -55,8 +55,8 @@ func TestServer_UpdateCounter(t *testing.T) {
 	defer ts.Close()
 
 	type want struct {
-		code     int
-		valueInt int64
+		code  int
+		value float64
 	}
 	tests := []struct {
 		name    string
@@ -70,8 +70,8 @@ func TestServer_UpdateCounter(t *testing.T) {
 			method: http.MethodGet,
 			url:    "/update/counter/testSetGet226/22",
 			want: want{
-				code:     400,
-				valueInt: 22,
+				code:  400,
+				value: 22,
 			},
 		},
 	}
@@ -81,7 +81,7 @@ func TestServer_UpdateCounter(t *testing.T) {
 			require.NoError(t, err)
 			resp, err := ts.Client().Do(req)
 			result, _ := repo.Get("testSetGet226")
-			if test.want.valueInt != result.ValueInt {
+			if test.want.value != result.Value {
 				t.Error("значение в хранилище не соответсвует")
 			}
 			require.NoError(t, err)
