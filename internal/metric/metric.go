@@ -27,7 +27,7 @@ type Metric struct {
 func (m *Metric) String() (string, error) {
 	switch m.Type {
 	case GaugeMetricType:
-		return strconv.FormatFloat(m.Value, 'g', -1, 64), nil
+		return strconv.FormatFloat(m.Value, 'f', -1, 64), nil
 	case CounterMetricType:
 		return strconv.FormatFloat(m.Value, 'f', 0, 64), nil
 	default:

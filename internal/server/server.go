@@ -2,9 +2,9 @@ package server
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	types "github.com/superles/yapmetrics/internal/metric"
 	"github.com/superles/yapmetrics/internal/server/config"
+	"github.com/superles/yapmetrics/internal/utils/logger"
 	"log"
 	"net/http"
 )
@@ -24,7 +24,11 @@ type Server struct {
 
 func New(s metricProvider) *Server {
 	router := chi.NewRouter()
-	router.Use(middleware.Logger)
+	err := logger.Initialize(logger.ErrorLevel)
+	if err != nil {
+		log.Panicln("ошибка инициализации логера", err.Error())
+	}
+	router.Use(WithLogging)
 	cfg := config.New()
 	server := &Server{storage: s, router: router, config: cfg}
 	server.registerRoutes()

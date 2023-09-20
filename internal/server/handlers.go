@@ -11,6 +11,10 @@ import (
 	"strconv"
 )
 
+func printValue(value float64) string {
+	return strconv.FormatFloat(value, 'f', -1, 64)
+}
+
 func (s *Server) MainPage(res http.ResponseWriter, req *http.Request) {
 
 	const tpl = `
@@ -26,11 +30,7 @@ func (s *Server) MainPage(res http.ResponseWriter, req *http.Request) {
 			{{range .}}    
 			  <tr>
 			  <td>{{.Name}}</td><td>
-			  {{if eq .Type "counter"}}
-			 	 <td>{{ printf "%d" .ValueInt }}</td>
-			  {{else}}
-			 	 <td>{{ printf "%.2f" .ValueFloat }}</td>
-			  {{end}}
+			  <td>{{ printValue .Value }}</td>
 			{{end}}
 		</table>
 	</body>
@@ -41,7 +41,12 @@ func (s *Server) MainPage(res http.ResponseWriter, req *http.Request) {
 			log.Fatal(err)
 		}
 	}
-	t, err := template.New("webpage").Parse(tpl)
+
+	t, err := template.New("webpage").Funcs(
+		template.FuncMap{
+			"printValue": printValue,
+		},
+	).Parse(tpl)
 
 	check(err)
 
@@ -55,6 +60,7 @@ func (s *Server) MainPage(res http.ResponseWriter, req *http.Request) {
 func (s *Server) BadRequest(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusBadRequest)
+	_, _ = w.Write([]byte(""))
 }
 
 func (s *Server) UpdateGauge(w http.ResponseWriter, r *http.Request) {
@@ -66,9 +72,11 @@ func (s *Server) UpdateGauge(w http.ResponseWriter, r *http.Request) {
 	floatVar, err := strconv.ParseFloat(value, 64)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("cannot parse gauge metric: %s", err), http.StatusBadRequest)
+		return
 	}
 	s.storage.SetFloat(name, floatVar)
 	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(""))
 }
 
 func (s *Server) UpdateCounter(w http.ResponseWriter, r *http.Request) {
@@ -80,9 +88,11 @@ func (s *Server) UpdateCounter(w http.ResponseWriter, r *http.Request) {
 	intVar, err := strconv.ParseInt(value, 10, 64)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("cannot parse counter metric: %s", err), http.StatusBadRequest)
+		return
 	}
 	s.storage.IncCounter(name, intVar)
 	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(""))
 }
 
 func (s *Server) GetValue(w http.ResponseWriter, r *http.Request) {
