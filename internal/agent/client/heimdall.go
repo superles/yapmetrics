@@ -17,7 +17,10 @@ func (c *HeimdallAgentClient) Post(url string, contentType string, body []byte, 
 		return c.client.Post(url, bytes.NewReader(body), headers)
 	}
 
-	cBody, err := Compress(body)
+	cBody, cErr := Compress(body)
+	if cErr != nil {
+		return nil, cErr
+	}
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(cBody))
 	if err != nil {
 		return nil, err
@@ -25,9 +28,7 @@ func (c *HeimdallAgentClient) Post(url string, contentType string, body []byte, 
 	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("Content-Encoding", "gzip")
 	req.Header.Set("Accept-Encoding", "gzip")
-	if err != nil {
-		return nil, err
-	}
+
 	return c.client.Do(req)
 }
 
