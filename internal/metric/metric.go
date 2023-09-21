@@ -53,6 +53,43 @@ func TypeToString(mType int) (string, error) {
 	case CounterMetricType:
 		return CounterMetricTypeName, nil
 	default:
-		return "", errors.New("ошибка вывода значения метрики")
+		return "", errors.New("тип метрики не существует")
 	}
+}
+
+func FromJson(data *JsonData) (*Metric, error) {
+	model := &Metric{Name: data.ID}
+	switch data.MType {
+	case GaugeMetricTypeName:
+		model.Type = GaugeMetricType
+		if data.Value != nil {
+			model.Value = *data.Value
+		}
+		model.Value = *data.Value
+	case CounterMetricTypeName:
+		model.Type = CounterMetricType
+		if data.Delta != nil {
+			model.Value = float64(*data.Delta)
+		}
+
+	default:
+		return model, errors.New("тип метрики не существует")
+	}
+	return model, nil
+}
+
+func (m *Metric) ToJson() (*JsonData, error) {
+	model := &JsonData{ID: m.Name}
+	switch m.Type {
+	case GaugeMetricType:
+		model.MType = GaugeMetricTypeName
+		model.Value = &m.Value
+	case CounterMetricType:
+		model.MType = CounterMetricTypeName
+		val := int64(m.Value)
+		model.Delta = &val
+	default:
+		return model, errors.New("тип метрики не существует")
+	}
+	return model, nil
 }

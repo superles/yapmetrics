@@ -4,6 +4,7 @@ import "sync"
 
 type Config struct {
 	Endpoint string `env:"ADDRESS"`
+	LogLevel string `env:"SERVER_LOG_LEVEL"`
 }
 
 var (
@@ -24,6 +25,12 @@ func New() *Config {
 			instance.Endpoint = envConfig.Endpoint
 		} else {
 			instance.Endpoint = flagConfig.Endpoint
+		}
+
+		if len(envConfig.LogLevel) > 0 {
+			instance.LogLevel = envConfig.LogLevel
+		} else {
+			instance.LogLevel = flagConfig.LogLevel
 		}
 	})
 

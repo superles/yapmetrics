@@ -1,11 +1,17 @@
 package agent
 
 import (
-	"fmt"
+	"errors"
+	"github.com/mailru/easyjson"
 	"github.com/superles/yapmetrics/internal/agent/client"
 	"github.com/superles/yapmetrics/internal/agent/config"
 	types "github.com/superles/yapmetrics/internal/metric"
+	"github.com/superles/yapmetrics/internal/utils/logger"
+	"go.uber.org/zap"
+	"io"
+	"log"
 	"math/rand"
+	"net/http"
 	"runtime"
 	"time"
 )
@@ -19,11 +25,64 @@ type metricProvider interface {
 type Agent struct {
 	storage metricProvider
 	config  *config.Config
+	client  *client.Client
 }
 
 func New(s metricProvider) *Agent {
-	agent := &Agent{storage: s, config: config.New()}
+	cfg := config.New()
+	err := logger.Initialize(cfg.LogLevel)
+	if err != nil {
+		log.Panicln("ошибка инициализации логера", err.Error())
+	}
+	cl := client.NewHttpAgentClient()
+	agent := &Agent{storage: s, config: cfg, client: &cl}
 	return agent
+}
+
+func (a *Agent) send(url string, contentType string, body []byte) (bool, error) {
+
+	start := time.Now()
+
+	response, postErr := (*a.client).Post(url, contentType, body)
+
+	finish := time.Since(start)
+
+	var bodyStr string
+	var statusCode int
+	if response != nil {
+		bodyBytes, readErr := io.ReadAll(response.Body)
+		if readErr != nil {
+			logger.Log.Error(readErr.Error())
+		}
+		bodyStr = string(bodyBytes)
+		statusCode = response.StatusCode
+	}
+
+	logger.Log.Info("send request",
+		zap.String("url", url),
+		zap.String("body", string(body)),
+		zap.Duration("duration", finish),
+		zap.Int("responseCode", statusCode),
+		zap.String("responseBody", bodyStr),
+		zap.Error(postErr),
+	)
+
+	if postErr != nil {
+		return false, postErr
+	}
+
+	defer func() {
+		err := response.Body.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	if response.StatusCode == http.StatusOK {
+		return true, nil
+	}
+
+	return false, errors.New("unknown error")
 }
 
 func (a *Agent) capture() {
@@ -60,25 +119,42 @@ func (a *Agent) capture() {
 	a.storage.IncCounter("PollCount", 1)
 }
 
-func (a *Agent) send(mName string, mType int, mValue string) error {
-	typeStr, _ := types.TypeToString(mType)
-	url := "http://" + a.config.Endpoint + "/update/" + typeStr + "/" + mName + "/" + mValue + ""
-	_, err := client.Send(url)
+func (a *Agent) sendPlain(data *types.Metric) error {
+	typeStr, _ := types.TypeToString(data.Type)
+	strVal, errVal := data.String()
+	if errVal != nil {
+		return errVal
+	}
+	url := "http://" + a.config.Endpoint + "/update/" + typeStr + "/" + data.Name + "/" + strVal + ""
+	_, err := a.send(url, "text/plain", []byte(""))
 	return err
 }
 
+func (a *Agent) sendJSON(data *types.Metric) error {
+	updatedJSON, err := data.ToJson()
+	if err != nil {
+		return err
+	}
+	rawBytes, _ := easyjson.Marshal(updatedJSON)
+	url := "http://" + a.config.Endpoint + "/update/"
+	_, sendErr := a.send(url, "application/json", rawBytes)
+	return sendErr
+}
+
 func (a *Agent) sendAll() error {
-	fmt.Println("sendAll")
+
+	logger.Log.Debug("sendAll")
 
 	metrics := a.storage.GetAll()
 
-	for Name, Item := range metrics {
-		strVal, errVal := Item.String()
-		if errVal != nil {
-			return errVal
-		}
-		err := a.send(Name, Item.Type, strVal)
+	for _, Item := range metrics {
+		err := a.sendJSON(&Item)
 		if err != nil {
+			logger.Log.Error(err.Error(),
+				zap.String("name", Item.Name),
+				zap.Int("type", Item.Type),
+				zap.Float64("value", Item.Value),
+			)
 			return err
 		}
 	}
@@ -87,7 +163,7 @@ func (a *Agent) sendAll() error {
 
 func (a *Agent) poolTick() {
 	for range time.Tick(time.Duration(a.config.PollInterval) * time.Second) {
-		fmt.Println("capture")
+		logger.Log.Debug("capture")
 		a.capture()
 	}
 }

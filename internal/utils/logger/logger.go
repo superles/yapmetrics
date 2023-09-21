@@ -5,14 +5,8 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type Level string
-
-func (l *Level) String() string {
-	return string(*l)
-}
-
 const (
-	DebugLevel Level = "debug"
+	DebugLevel = "debug"
 	// InfoLevel is the default logging priority.
 	InfoLevel = "info"
 	// WarnLevel logs are more important than Info, but don't need individual
@@ -32,10 +26,19 @@ const (
 
 var Log *zap.Logger = zap.NewNop()
 
+func parseLevel(level string) string {
+	switch level {
+	case DebugLevel, InfoLevel, WarnLevel, ErrorLevel, DPanicLevel, PanicLevel, FatalLevel:
+		return level
+	default:
+		return ErrorLevel
+	}
+}
+
 // Initialize инициализирует синглтон логера с необходимым уровнем логирования.
-func Initialize(level Level) error {
+func Initialize(level string) error {
 	// преобразуем текстовый уровень логирования в zap.AtomicLevel
-	lvl, err := zap.ParseAtomicLevel(level.String())
+	lvl, err := zap.ParseAtomicLevel(parseLevel(level))
 	if err != nil {
 		return err
 	}
@@ -43,6 +46,7 @@ func Initialize(level Level) error {
 	cfg := zap.NewProductionConfig()
 	cfg.EncoderConfig.TimeKey = "timestamp"
 	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	cfg.EncoderConfig.SkipLineEnding = false
 	// устанавливаем уровень
 	cfg.Level = lvl
 	// создаём логер на основе конфигурации

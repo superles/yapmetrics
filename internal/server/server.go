@@ -11,7 +11,8 @@ import (
 
 type metricProvider interface {
 	GetAll() map[string]types.Metric
-	Get(name string) (types.Metric, error)
+	Get(name string) (types.Metric, bool)
+	Set(data *types.Metric)
 	SetFloat(Name string, Value float64)
 	IncCounter(Name string, Value int64)
 }
@@ -23,19 +24,22 @@ type Server struct {
 }
 
 func New(s metricProvider) *Server {
+	cfg := config.New()
 	router := chi.NewRouter()
-	err := logger.Initialize(logger.ErrorLevel)
+	err := logger.Initialize(cfg.LogLevel)
 	if err != nil {
 		log.Panicln("ошибка инициализации логера", err.Error())
 	}
+
 	router.Use(WithLogging)
-	cfg := config.New()
 	server := &Server{storage: s, router: router, config: cfg}
 	server.registerRoutes()
 	return server
 }
 
 func (s *Server) registerRoutes() {
+	s.router.Post("/update/", s.Update)
+	s.router.Post("/value/", s.GetJSONValue)
 	s.router.Post("/update/counter/{name}/{value}", s.UpdateCounter)
 	s.router.Post("/update/gauge/{name}/{value}", s.UpdateGauge)
 	s.router.Get("/update/counter/{name}/{value}", s.UpdateCounter)
