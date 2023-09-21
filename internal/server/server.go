@@ -4,6 +4,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	types "github.com/superles/yapmetrics/internal/metric"
 	"github.com/superles/yapmetrics/internal/server/config"
+	"github.com/superles/yapmetrics/internal/server/middleware/compress"
+	"github.com/superles/yapmetrics/internal/server/middleware/logging"
 	"github.com/superles/yapmetrics/internal/utils/logger"
 	"log"
 	"net/http"
@@ -31,7 +33,7 @@ func New(s metricProvider) *Server {
 		log.Panicln("ошибка инициализации логера", err.Error())
 	}
 
-	router.Use(WithLogging)
+	router.Use(compress.WithCompressGzip, logging.WithLogging)
 	server := &Server{storage: s, router: router, config: cfg}
 	server.registerRoutes()
 	return server

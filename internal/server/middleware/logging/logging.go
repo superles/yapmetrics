@@ -1,8 +1,10 @@
-package server
+package logging
 
 import (
+	"bytes"
 	"github.com/superles/yapmetrics/internal/utils/logger"
 	"go.uber.org/zap"
+	"io"
 	"net/http"
 	"time"
 )
@@ -53,15 +55,15 @@ func WithLogging(h http.Handler) http.Handler {
 		}
 		var bodyStr string
 
-		//if r.Method == http.MethodPost {
-		//	bodyBytes, _ := io.ReadAll(r.Body)
-		//	err := r.Body.Close()
-		//	if err != nil {
-		//		return
-		//	}
-		//	r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-		//	bodyStr = string(bodyBytes)
-		//}
+		if r.Method == http.MethodPost {
+			bodyBytes, _ := io.ReadAll(r.Body)
+			err := r.Body.Close()
+			if err != nil {
+				return
+			}
+			r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+			bodyStr = string(bodyBytes)
+		}
 
 		h.ServeHTTP(&lw, r) // внедряем реализацию http.ResponseWriter
 

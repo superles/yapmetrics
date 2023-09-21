@@ -195,7 +195,7 @@ func (s *Server) GetValue(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) GetJSONValue(w http.ResponseWriter, r *http.Request) {
 
-	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Type", "application/json")
 
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()

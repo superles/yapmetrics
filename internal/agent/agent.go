@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"compress/gzip"
 	"errors"
 	"github.com/mailru/easyjson"
 	"github.com/superles/yapmetrics/internal/agent/client"
@@ -13,6 +14,7 @@ import (
 	"math/rand"
 	"net/http"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -25,7 +27,7 @@ type metricProvider interface {
 type Agent struct {
 	storage metricProvider
 	config  *config.Config
-	client  *client.Client
+	client  client.Client
 }
 
 func New(s metricProvider) *Agent {
@@ -34,8 +36,7 @@ func New(s metricProvider) *Agent {
 	if err != nil {
 		log.Panicln("ошибка инициализации логера", err.Error())
 	}
-	cl := client.NewHTTPAgentClient()
-	agent := &Agent{storage: s, config: cfg, client: &cl}
+	agent := &Agent{storage: s, config: cfg, client: client.NewHTTPAgentClient()}
 	return agent
 }
 
@@ -43,14 +44,28 @@ func (a *Agent) send(url string, contentType string, body []byte) (bool, error) 
 
 	start := time.Now()
 
-	response, postErr := (*a.client).Post(url, contentType, body)
+	response, postErr := a.client.Post(url, contentType, body, true)
 
 	finish := time.Since(start)
 
 	var bodyStr string
 	var statusCode int
 	if response != nil {
-		bodyBytes, readErr := io.ReadAll(response.Body)
+
+		bodyReader := response.Body
+
+		contentEncoding := response.Header.Get("Content-Encoding")
+		sendsGzip := strings.Contains(contentEncoding, "gzip")
+
+		if sendsGzip {
+			zr, err := gzip.NewReader(response.Body)
+			if err != nil {
+				return false, err
+			}
+			bodyReader = zr
+		}
+
+		bodyBytes, readErr := io.ReadAll(bodyReader)
 		if readErr != nil {
 			logger.Log.Error(readErr.Error())
 		}

@@ -9,8 +9,21 @@ type HTTPAgentClient struct {
 	client *http.Client
 }
 
-func (c *HTTPAgentClient) Post(url string, contentType string, body []byte) (*http.Response, error) {
-	return c.client.Post(url, contentType, bytes.NewReader(body))
+func (c *HTTPAgentClient) Post(url string, contentType string, body []byte, compress bool) (*http.Response, error) {
+	if !compress {
+		return c.client.Post(url, contentType, bytes.NewReader(body))
+	}
+	cBody, err := Compress(body)
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(cBody))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Encoding", "gzip")
+	req.Header.Set("Accept-Encoding", "gzip")
+	if err != nil {
+		return nil, err
+	}
+	return c.client.Do(req)
 }
 
 func NewHTTPAgentClient() Client {
