@@ -1,6 +1,6 @@
 package metric
 
-//easyjson:json
+//go:generate easyjson -all json.go
 type JSONData struct {
 	ID    string   `json:"id"`              // имя метрики
 	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter

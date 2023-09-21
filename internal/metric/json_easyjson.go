@@ -97,6 +97,13 @@ func easyjson42239ddeEncodeGithubComSuperlesYapmetricsInternalMetric(out *jwrite
 	out.RawByte('}')
 }
 
+// MarshalJSON supports json.Marshaler interface
+func (v JSONData) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjson42239ddeEncodeGithubComSuperlesYapmetricsInternalMetric(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v JSONData) MarshalEasyJSON(w *jwriter.Writer) {
 	easyjson42239ddeEncodeGithubComSuperlesYapmetricsInternalMetric(w, v)
