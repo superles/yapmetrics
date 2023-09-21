@@ -34,7 +34,7 @@ func New(s metricProvider) *Agent {
 	if err != nil {
 		log.Panicln("ошибка инициализации логера", err.Error())
 	}
-	cl := client.NewHttpAgentClient()
+	cl := client.NewHTTPAgentClient()
 	agent := &Agent{storage: s, config: cfg, client: &cl}
 	return agent
 }
@@ -131,7 +131,7 @@ func (a *Agent) sendPlain(data *types.Metric) error {
 }
 
 func (a *Agent) sendJSON(data *types.Metric) error {
-	updatedJSON, err := data.ToJson()
+	updatedJSON, err := data.ToJSON()
 	if err != nil {
 		return err
 	}

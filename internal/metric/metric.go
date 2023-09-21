@@ -57,7 +57,7 @@ func TypeToString(mType int) (string, error) {
 	}
 }
 
-func FromJson(data *JsonData) (*Metric, error) {
+func FromJSON(data *JSONData) (*Metric, error) {
 	model := &Metric{Name: data.ID}
 	switch data.MType {
 	case GaugeMetricTypeName:
@@ -78,8 +78,8 @@ func FromJson(data *JsonData) (*Metric, error) {
 	return model, nil
 }
 
-func (m *Metric) ToJson() (*JsonData, error) {
-	model := &JsonData{ID: m.Name}
+func (m *Metric) ToJSON() (*JSONData, error) {
+	model := &JSONData{ID: m.Name}
 	switch m.Type {
 	case GaugeMetricType:
 		model.MType = GaugeMetricTypeName

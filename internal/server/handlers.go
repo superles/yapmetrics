@@ -100,7 +100,7 @@ func (s *Server) Update(w http.ResponseWriter, r *http.Request) {
 
 	body, _ := io.ReadAll(r.Body)
 
-	updateData := metric.JsonData{}
+	updateData := metric.JSONData{}
 
 	if err := easyjson.Unmarshal(body, &updateData); err != nil {
 		logger.Log.Error(err.Error())
@@ -129,7 +129,7 @@ func (s *Server) Update(w http.ResponseWriter, r *http.Request) {
 
 	updatedData, _ := s.storage.Get(updateData.ID)
 
-	if updatedJSON, err := updatedData.ToJson(); err == nil {
+	if updatedJSON, err := updatedData.ToJSON(); err == nil {
 		rawBytes, _ := easyjson.Marshal(updatedJSON)
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(rawBytes)
@@ -206,7 +206,7 @@ func (s *Server) GetJSONValue(w http.ResponseWriter, r *http.Request) {
 
 	body, _ := io.ReadAll(r.Body)
 
-	getData := metric.JsonData{}
+	getData := metric.JSONData{}
 
 	if err := easyjson.Unmarshal(body, &getData); err != nil {
 		logger.Log.Error(err.Error())
@@ -229,7 +229,7 @@ func (s *Server) GetJSONValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if updatedJSON, err := metricItem.ToJson(); err == nil {
+	if updatedJSON, err := metricItem.ToJSON(); err == nil {
 		rawBytes, _ := easyjson.Marshal(updatedJSON)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)

@@ -17,7 +17,7 @@ var (
 	_ easyjson.Marshaler
 )
 
-func easyjson42239ddeDecodeGithubComSuperlesYapmetricsInternalMetric(in *jlexer.Lexer, out *JsonData) {
+func easyjson42239ddeDecodeGithubComSuperlesYapmetricsInternalMetric(in *jlexer.Lexer, out *JSONData) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -70,7 +70,7 @@ func easyjson42239ddeDecodeGithubComSuperlesYapmetricsInternalMetric(in *jlexer.
 		in.Consumed()
 	}
 }
-func easyjson42239ddeEncodeGithubComSuperlesYapmetricsInternalMetric(out *jwriter.Writer, in JsonData) {
+func easyjson42239ddeEncodeGithubComSuperlesYapmetricsInternalMetric(out *jwriter.Writer, in JSONData) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -98,18 +98,18 @@ func easyjson42239ddeEncodeGithubComSuperlesYapmetricsInternalMetric(out *jwrite
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
-func (v JsonData) MarshalEasyJSON(w *jwriter.Writer) {
+func (v JSONData) MarshalEasyJSON(w *jwriter.Writer) {
 	easyjson42239ddeEncodeGithubComSuperlesYapmetricsInternalMetric(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
-func (v *JsonData) UnmarshalJSON(data []byte) error {
+func (v *JSONData) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
 	easyjson42239ddeDecodeGithubComSuperlesYapmetricsInternalMetric(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *JsonData) UnmarshalEasyJSON(l *jlexer.Lexer) {
+func (v *JSONData) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjson42239ddeDecodeGithubComSuperlesYapmetricsInternalMetric(l, v)
 }
