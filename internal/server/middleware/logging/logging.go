@@ -25,6 +25,10 @@ type (
 	}
 )
 
+func (r *loggingResponseWriter) Header() http.Header {
+	return r.ResponseWriter.Header()
+}
+
 func (r *loggingResponseWriter) Write(b []byte) (int, error) {
 	// записываем ответ, используя оригинальный http.ResponseWriter
 	size, err := r.ResponseWriter.Write(b)

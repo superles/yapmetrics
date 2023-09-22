@@ -19,6 +19,16 @@ func printValue(value float64) string {
 	return strconv.FormatFloat(value, 'f', -1, 64)
 }
 
+func (s *Server) dumpStorage() {
+	if s.config.StoreInterval == 0 {
+		go func() {
+			if err := s.Dump(); err != nil {
+				logger.Log.Fatal(err.Error())
+			}
+		}()
+	}
+}
+
 func (s *Server) MainPage(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "text/html")
 	const tpl = `
@@ -83,6 +93,7 @@ func (s *Server) UpdateGauge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.storage.SetFloat(name, floatVar)
+	s.dumpStorage()
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(""))
 }
@@ -127,6 +138,8 @@ func (s *Server) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	s.dumpStorage()
+
 	updatedData, _ := s.storage.Get(updateData.ID)
 
 	if updatedJSON, err := updatedData.ToJSON(); err == nil {
@@ -151,6 +164,7 @@ func (s *Server) UpdateCounter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.storage.IncCounter(name, intVar)
+	s.dumpStorage()
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(""))
 }

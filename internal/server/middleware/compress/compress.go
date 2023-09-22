@@ -2,6 +2,7 @@ package compress
 
 import (
 	"compress/gzip"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -10,46 +11,44 @@ import (
 // compressWriter реализует интерфейс http.ResponseWriter и позволяет прозрачно для сервера
 // сжимать передаваемые данные и выставлять правильные HTTP-заголовки
 type compressWriter struct {
-	w  http.ResponseWriter
+	http.ResponseWriter
 	zw *gzip.Writer
 }
 
 func newCompressWriter(w http.ResponseWriter) *compressWriter {
 	return &compressWriter{
-		w:  w,
-		zw: gzip.NewWriter(w),
+		ResponseWriter: w,
+		zw:             gzip.NewWriter(w),
 	}
 }
 
 func (c *compressWriter) Header() http.Header {
-	return c.w.Header()
+	return c.ResponseWriter.Header()
 }
 
 func (c *compressWriter) Write(p []byte) (int, error) {
-	contentType := c.w.Header().Get("Content-Type")
-	isHTML := strings.Contains(contentType, "text/html")
-	isJSON := strings.Contains(contentType, "application/json")
-	if !isJSON && !isHTML {
-		return c.w.Write(p)
+	if !canCompress(c.ResponseWriter) {
+		return c.ResponseWriter.Write(p)
 	}
 	return c.zw.Write(p)
 }
 
 func (c *compressWriter) WriteHeader(statusCode int) {
 	if statusCode < 300 {
-		contentType := c.w.Header().Get("Content-Type")
-		isHTML := strings.Contains(contentType, "text/html")
-		isJSON := strings.Contains(contentType, "application/json")
-		if isJSON || isHTML {
-			c.w.Header().Set("Content-Encoding", "gzip")
+		if canCompress(c.ResponseWriter) {
+			c.ResponseWriter.Header().Set("Content-Encoding", "gzip")
 		}
 	}
-	c.w.WriteHeader(statusCode)
+	c.ResponseWriter.WriteHeader(statusCode)
 }
 
 // Close закрывает gzip.Writer и досылает все данные из буфера.
 func (c *compressWriter) Close() error {
-	return c.zw.Close()
+	if canCompress(c) {
+		return c.zw.Close()
+	}
+	c.zw.Reset(c.ResponseWriter)
+	return nil
 }
 
 // compressReader реализует интерфейс io.ReadCloser и позволяет прозрачно для сервера
@@ -82,8 +81,15 @@ func (c *compressReader) Close() error {
 	return c.zr.Close()
 }
 
+func canCompress(w http.ResponseWriter) bool {
+	contentType := w.Header().Get("Content-Type")
+	isHTML := strings.Contains(contentType, "text/html")
+	isJSON := strings.Contains(contentType, "application/json")
+	return isJSON || isHTML
+}
+
 func WithCompressGzip(h http.Handler) http.Handler {
-	logFn := func(w http.ResponseWriter, r *http.Request) {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// по умолчанию устанавливаем оригинальный http.ResponseWriter как тот,
 		// который будем передавать следующей функции
 		ow := w
@@ -118,6 +124,7 @@ func WithCompressGzip(h http.Handler) http.Handler {
 
 		// передаём управление хендлеру
 		h.ServeHTTP(ow, r)
-	}
-	return http.HandlerFunc(logFn)
+
+		fmt.Println("finish")
+	})
 }
