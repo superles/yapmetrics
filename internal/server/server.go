@@ -105,22 +105,26 @@ func (s *Server) Dump() error {
 	return nil
 }
 
+func (s *Server) startDumpWatcher() {
+	if s.config.StoreInterval > 0 {
+		ticker := time.NewTicker(time.Second * time.Duration(s.config.StoreInterval))
+		go func() {
+			for t := range ticker.C {
+				logger.Log.Debug(fmt.Sprintf("Tick at: %v\n", t.UTC()))
+				if err := s.Dump(); err != nil {
+					logger.Log.Fatal(err.Error())
+				}
+			}
+		}()
+	}
+}
+
 func (s *Server) Run() {
 
 	if s.config.Restore {
 		if err := s.Load(); err != nil {
 			logger.Log.Fatal(err.Error())
 		}
-	}
-
-	if s.config.StoreInterval > 0 {
-		go func() {
-			for range time.Tick(time.Second * time.Duration(s.config.StoreInterval)) {
-				if err := s.Dump(); err != nil {
-					logger.Log.Fatal(err.Error())
-				}
-			}
-		}()
 	}
 
 	done := make(chan os.Signal, 1)
@@ -136,6 +140,8 @@ func (s *Server) Run() {
 			logger.Log.Error(fmt.Sprintf("не могу запустить сервер: %s", err))
 		}
 	}()
+
+	s.startDumpWatcher()
 
 	logger.Log.Info("Server Started")
 	<-done
