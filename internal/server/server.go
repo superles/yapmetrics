@@ -59,7 +59,7 @@ func (s *Server) registerRoutes() {
 	s.router.Get("/", s.MainPage)
 }
 
-func (s *Server) Load() error {
+func (s *Server) load() error {
 	file, fileErr := os.OpenFile(s.config.FileStoragePath, os.O_RDONLY|os.O_CREATE, 0666)
 	if fileErr != nil {
 		return fileErr
@@ -83,7 +83,7 @@ func (s *Server) Load() error {
 	return nil
 }
 
-func (s *Server) Dump() error {
+func (s *Server) dump() error {
 	file, fileErr := os.OpenFile(s.config.FileStoragePath, os.O_WRONLY|os.O_CREATE, 0666)
 	if fileErr != nil {
 		return fileErr
@@ -111,7 +111,7 @@ func (s *Server) startDumpWatcher() {
 		go func() {
 			for t := range ticker.C {
 				logger.Log.Debug(fmt.Sprintf("Tick at: %v\n", t.UTC()))
-				if err := s.Dump(); err != nil {
+				if err := s.dump(); err != nil {
 					logger.Log.Fatal(err.Error())
 				}
 			}
@@ -122,7 +122,7 @@ func (s *Server) startDumpWatcher() {
 func (s *Server) Run() {
 
 	if s.config.Restore {
-		if err := s.Load(); err != nil {
+		if err := s.load(); err != nil {
 			logger.Log.Fatal(err.Error())
 		}
 	}
@@ -153,7 +153,7 @@ func (s *Server) Run() {
 
 	logger.Log.Info("Server Exited Properly")
 
-	if err := s.Dump(); err != nil {
+	if err := s.dump(); err != nil {
 		logger.Log.Fatal(err.Error())
 	}
 

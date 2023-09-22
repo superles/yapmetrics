@@ -22,7 +22,7 @@ func printValue(value float64) string {
 func (s *Server) dumpStorage() {
 	if s.config.StoreInterval == 0 {
 		go func() {
-			if err := s.Dump(); err != nil {
+			if err := s.dump(); err != nil {
 				logger.Log.Fatal(err.Error())
 			}
 		}()
