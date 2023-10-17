@@ -27,7 +27,7 @@ type Metric struct {
 func (m *Metric) String() (string, error) {
 	switch m.Type {
 	case GaugeMetricType:
-		return strconv.FormatFloat(m.Value, 'g', -1, 64), nil
+		return strconv.FormatFloat(m.Value, 'f', -1, 64), nil
 	case CounterMetricType:
 		return strconv.FormatFloat(m.Value, 'f', 0, 64), nil
 	default:
@@ -53,6 +53,43 @@ func TypeToString(mType int) (string, error) {
 	case CounterMetricType:
 		return CounterMetricTypeName, nil
 	default:
-		return "", errors.New("ошибка вывода значения метрики")
+		return "", errors.New("тип метрики не существует")
 	}
+}
+
+func FromJSON(data *JSONData) (*Metric, error) {
+	model := &Metric{Name: data.ID}
+	switch data.MType {
+	case GaugeMetricTypeName:
+		model.Type = GaugeMetricType
+		if data.Value != nil {
+			model.Value = *data.Value
+		}
+		model.Value = *data.Value
+	case CounterMetricTypeName:
+		model.Type = CounterMetricType
+		if data.Delta != nil {
+			model.Value = float64(*data.Delta)
+		}
+
+	default:
+		return model, errors.New("тип метрики не существует")
+	}
+	return model, nil
+}
+
+func (m *Metric) ToJSON() (*JSONData, error) {
+	model := &JSONData{ID: m.Name}
+	switch m.Type {
+	case GaugeMetricType:
+		model.MType = GaugeMetricTypeName
+		model.Value = &m.Value
+	case CounterMetricType:
+		model.MType = CounterMetricTypeName
+		val := int64(m.Value)
+		model.Delta = &val
+	default:
+		return model, errors.New("тип метрики не существует")
+	}
+	return model, nil
 }

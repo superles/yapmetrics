@@ -3,7 +3,11 @@ package config
 import "sync"
 
 type Config struct {
-	Endpoint string `env:"ADDRESS"`
+	Endpoint        string `env:"ADDRESS"`
+	LogLevel        string `env:"SERVER_LOG_LEVEL"`
+	StoreInterval   int    `env:"STORE_INTERVAL"`
+	FileStoragePath string `env:"FILE_STORAGE_PATH"`
+	Restore         bool   `env:"RESTORE"`
 }
 
 var (
@@ -24,6 +28,30 @@ func New() *Config {
 			instance.Endpoint = envConfig.Endpoint
 		} else {
 			instance.Endpoint = flagConfig.Endpoint
+		}
+
+		if len(envConfig.LogLevel) > 0 {
+			instance.LogLevel = envConfig.LogLevel
+		} else {
+			instance.LogLevel = flagConfig.LogLevel
+		}
+
+		if envConfig.StoreInterval > 0 {
+			instance.StoreInterval = envConfig.StoreInterval
+		} else {
+			instance.StoreInterval = flagConfig.StoreInterval
+		}
+
+		if len(envConfig.FileStoragePath) > 0 {
+			instance.FileStoragePath = envConfig.FileStoragePath
+		} else {
+			instance.FileStoragePath = flagConfig.FileStoragePath
+		}
+
+		if envConfig.Restore {
+			instance.Restore = envConfig.Restore
+		} else {
+			instance.Restore = flagConfig.Restore
 		}
 	})
 

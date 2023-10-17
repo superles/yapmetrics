@@ -6,6 +6,7 @@ type Config struct {
 	Endpoint       string `env:"ADDRESS"`
 	ReportInterval int    `env:"REPORT_INTERVAL"`
 	PollInterval   int    `env:"POLL_INTERVAL"`
+	LogLevel       string `env:"AGENT_LOG_LEVEL"`
 }
 
 var (
@@ -38,6 +39,12 @@ func New() *Config {
 			instance.PollInterval = envConfig.PollInterval
 		} else {
 			instance.PollInterval = flagConfig.PollInterval
+		}
+
+		if len(envConfig.LogLevel) > 0 {
+			instance.LogLevel = envConfig.LogLevel
+		} else {
+			instance.LogLevel = flagConfig.LogLevel
 		}
 	})
 

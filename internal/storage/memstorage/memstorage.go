@@ -1,7 +1,6 @@
 package memstorage
 
 import (
-	"errors"
 	types "github.com/superles/yapmetrics/internal/metric"
 	"sync"
 )
@@ -29,14 +28,20 @@ func (s *MemStorage) GetAll() map[string]types.Metric {
 	return targetMap
 }
 
-func (s *MemStorage) Get(name string) (types.Metric, error) {
+func (s *MemStorage) Get(name string) (types.Metric, bool) {
 	storageSync.Lock()
 	defer storageSync.Unlock()
 	val, ok := s.collection[name]
 	if !ok {
-		return types.Metric{}, errors.New("метрика не найдена")
+		return types.Metric{}, false
 	}
-	return val, nil
+	return val, true
+}
+
+func (s *MemStorage) Set(data *types.Metric) {
+	storageSync.Lock()
+	defer storageSync.Unlock()
+	s.collection[data.Name] = *data
 }
 
 func (s *MemStorage) SetFloat(Name string, Value float64) {
