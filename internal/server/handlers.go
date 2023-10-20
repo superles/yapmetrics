@@ -179,6 +179,7 @@ func (s *Server) Updates(w http.ResponseWriter, r *http.Request) {
 
 	if err := s.storage.SetAll(context.Background(), item.ToMetrics()); err != nil {
 		http.Error(w, fmt.Sprintf("ошибка: %s", err), http.StatusBadRequest)
+		return
 	}
 
 	if true {

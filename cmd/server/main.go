@@ -6,6 +6,7 @@ import (
 	storage2 "github.com/superles/yapmetrics/internal/storage"
 	"github.com/superles/yapmetrics/internal/storage/memstorage"
 	"github.com/superles/yapmetrics/internal/storage/pgstorage"
+	"github.com/superles/yapmetrics/internal/utils/logger"
 )
 
 func main() {
@@ -13,6 +14,7 @@ func main() {
 	var storage storage2.Storage
 	storage = memstorage.New()
 	if len(cfg.DatabaseDsn) > 0 {
+		logger.Log.Sugar().Debug(cfg)
 		storage = pgstorage.New(cfg.DatabaseDsn)
 	}
 	srv := server.New(storage, cfg)

@@ -213,6 +213,10 @@ func (a *Agent) Run() {
 	go a.poolTick()
 
 	for range time.Tick(time.Second * time.Duration(a.config.ReportInterval)) {
-		a.sendAll()
+		logger.Log.Sugar().Debug("agent run sendAllJSON")
+		err := a.sendAllJSON()
+		if err != nil {
+			return
+		}
 	}
 }

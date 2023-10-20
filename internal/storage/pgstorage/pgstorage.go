@@ -129,6 +129,10 @@ func (s *PgStorage) SetAll(ctx context.Context, data *[]types.Metric) error {
 			s.IncCounter(ctx, item.Name, int64(item.Value))
 		default:
 			logger.Log.Error("неверный тип метрики")
+			if err := begin.Rollback(); err != nil {
+				return err
+			}
+			return nil
 		}
 	}
 
