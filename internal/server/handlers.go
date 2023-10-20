@@ -177,7 +177,7 @@ func (s *Server) GetPing(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
 
-	dsn, err := pgx.ParseConfig(s.config.DatabaseDsn)
+	dsn, _ := pgx.ParseConfig(s.config.DatabaseDsn)
 
 	ps := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable",
 		dsn.Host, dsn.User, dsn.Password, dsn.Database)

@@ -19,7 +19,7 @@ type PgStorage struct {
 
 func New(dsn string) *PgStorage {
 
-	connCfg, err := pgx.ParseConfig(dsn)
+	connCfg, _ := pgx.ParseConfig(dsn)
 
 	ps := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable",
 		connCfg.Host, connCfg.User, connCfg.Password, connCfg.Database)
@@ -57,6 +57,11 @@ func (s *PgStorage) GetAll(ctx context.Context) map[string]types.Metric {
 	rows, err := s.db.QueryContext(ctx, `
 SELECT id, type, value from `+tableName+`	
 `)
+	if rows.Err() != nil {
+		logger.Log.Error(err.Error())
+		return items
+	}
+
 	if err != nil {
 		logger.Log.Error(err.Error())
 		return items
