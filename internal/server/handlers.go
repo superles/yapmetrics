@@ -11,7 +11,6 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/mailru/easyjson"
 	"github.com/superles/yapmetrics/internal/metric"
-	"github.com/superles/yapmetrics/internal/storage/pgstorage"
 	"github.com/superles/yapmetrics/internal/utils/logger"
 	"html/template"
 	"io"
@@ -183,12 +182,6 @@ func (s *Server) GetPing(w http.ResponseWriter, r *http.Request) {
 	ps := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable",
 		dsn.Host, dsn.User, dsn.Password, dsn.Database)
 
-	storage := pgstorage.New(s.config.DatabaseDsn)
-
-	all := storage.GetAll(context.Background())
-
-	logger.Log.Sugar().Debug(all)
-
 	db, err := sql.Open("pgx", ps)
 
 	if err != nil {
@@ -201,25 +194,6 @@ func (s *Server) GetPing(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	rows, err := db.QueryContext(context.Background(), `
-SELECT id as name, type as mType, value as value from metrics	
-`)
-	if err != nil {
-		panic(err)
-	}
-
-	var items []metric.Metric
-
-	for rows.Next() {
-		var item metric.Metric
-		err = rows.Scan(&item.Name, &item.Type, &item.Value)
-		if err != nil {
-			panic(err)
-		}
-		items = append(items, item)
-	}
-
 	defer db.Close()
 
 	w.WriteHeader(http.StatusOK)
