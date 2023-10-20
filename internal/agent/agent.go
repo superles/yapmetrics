@@ -211,6 +211,6 @@ func (a *Agent) Run() {
 	go a.poolTick()
 
 	for range time.Tick(time.Second * time.Duration(a.config.ReportInterval)) {
-		a.sendAllJSON()
+		a.sendAll()
 	}
 }
