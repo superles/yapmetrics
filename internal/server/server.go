@@ -20,11 +20,11 @@ import (
 )
 
 type metricProvider interface {
-	GetAll() map[string]types.Metric
-	Get(name string) (types.Metric, bool)
-	Set(data *types.Metric)
-	SetFloat(Name string, Value float64)
-	IncCounter(Name string, Value int64)
+	GetAll(ctx context.Context) map[string]types.Metric
+	Get(ctx context.Context, name string) (types.Metric, bool)
+	Set(ctx context.Context, data *types.Metric)
+	SetFloat(ctx context.Context, Name string, Value float64)
+	IncCounter(ctx context.Context, Name string, Value int64)
 }
 
 type Server struct {
@@ -33,8 +33,7 @@ type Server struct {
 	config  *config.Config
 }
 
-func New(s metricProvider) *Server {
-	cfg := config.New()
+func New(s metricProvider, cfg *config.Config) *Server {
 	router := chi.NewRouter()
 	err := logger.Initialize(cfg.LogLevel)
 	if err != nil {
@@ -56,6 +55,7 @@ func (s *Server) registerRoutes() {
 	s.router.Get("/update/gauge/{name}/{value}", s.UpdateGauge)
 	s.router.Post("/update/{type}/{name}/{value}", s.BadRequest)
 	s.router.Get("/value/{type}/{name}", s.GetValue)
+	s.router.Get("/ping", s.GetPing)
 	s.router.Get("/", s.MainPage)
 }
 
@@ -73,7 +73,7 @@ func (s *Server) load() error {
 		} else if err != nil {
 			log.Fatal(err)
 		}
-		s.storage.Set(&m)
+		s.storage.Set(context.Background(), &m)
 	}
 
 	if err := file.Close(); err != nil {
@@ -92,7 +92,7 @@ func (s *Server) dump() error {
 		return err
 	}
 	encoder := json.NewEncoder(file)
-	for _, metric := range s.storage.GetAll() {
+	for _, metric := range s.storage.GetAll(context.Background()) {
 		err := encoder.Encode(&metric)
 		if err != nil {
 			return fileErr
@@ -121,7 +121,7 @@ func (s *Server) startDumpWatcher() {
 
 func (s *Server) Run() {
 
-	if s.config.Restore {
+	if s.config.Restore && s.config.DatabaseDsn == "" {
 		if err := s.load(); err != nil {
 			logger.Log.Fatal(err.Error())
 		}

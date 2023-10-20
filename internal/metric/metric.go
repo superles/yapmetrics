@@ -31,7 +31,7 @@ func (m *Metric) String() (string, error) {
 	case CounterMetricType:
 		return strconv.FormatFloat(m.Value, 'f', 0, 64), nil
 	default:
-		return "", errors.New("ошибка вывода значения метрики")
+		return "", errors.New("unsupported metric type")
 	}
 }
 

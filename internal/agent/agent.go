@@ -2,6 +2,7 @@ package agent
 
 import (
 	"compress/gzip"
+	"context"
 	"errors"
 	"github.com/mailru/easyjson"
 	"github.com/superles/yapmetrics/internal/agent/client"
@@ -19,9 +20,9 @@ import (
 )
 
 type metricProvider interface {
-	GetAll() map[string]types.Metric
-	SetFloat(Name string, Value float64)
-	IncCounter(Name string, Value int64)
+	GetAll(ctx context.Context) map[string]types.Metric
+	SetFloat(ctx context.Context, Name string, Value float64)
+	IncCounter(ctx context.Context, Name string, Value int64)
 }
 
 type Agent struct {
@@ -30,8 +31,7 @@ type Agent struct {
 	client  client.Client
 }
 
-func New(s metricProvider) *Agent {
-	cfg := config.New()
+func New(s metricProvider, cfg *config.Config) *Agent {
 	err := logger.Initialize(cfg.LogLevel)
 	if err != nil {
 		log.Panicln("ошибка инициализации логера", err.Error())
@@ -103,35 +103,36 @@ func (a *Agent) send(url string, contentType string, body []byte) (bool, error) 
 func (a *Agent) capture() {
 	var stats runtime.MemStats
 	runtime.ReadMemStats(&stats)
-	a.storage.SetFloat("Alloc", float64(stats.Alloc))
-	a.storage.SetFloat("BuckHashSys", float64(stats.BuckHashSys))
-	a.storage.SetFloat("Frees", float64(stats.Frees))
-	a.storage.SetFloat("GCCPUFraction", stats.GCCPUFraction)
-	a.storage.SetFloat("GCSys", float64(stats.GCSys))
-	a.storage.SetFloat("HeapAlloc", float64(stats.HeapAlloc))
-	a.storage.SetFloat("HeapIdle", float64(stats.HeapIdle))
-	a.storage.SetFloat("HeapInuse", float64(stats.HeapInuse))
-	a.storage.SetFloat("HeapObjects", float64(stats.HeapObjects))
-	a.storage.SetFloat("HeapReleased", float64(stats.HeapReleased))
-	a.storage.SetFloat("HeapSys", float64(stats.HeapSys))
-	a.storage.SetFloat("LastGC", float64(stats.LastGC))
-	a.storage.SetFloat("Lookups", float64(stats.Lookups))
-	a.storage.SetFloat("MCacheInuse", float64(stats.MCacheInuse))
-	a.storage.SetFloat("MCacheSys", float64(stats.MCacheSys))
-	a.storage.SetFloat("MSpanInuse", float64(stats.MSpanInuse))
-	a.storage.SetFloat("MSpanSys", float64(stats.MSpanSys))
-	a.storage.SetFloat("Mallocs", float64(stats.Mallocs))
-	a.storage.SetFloat("NextGC", float64(stats.NextGC))
-	a.storage.SetFloat("NumForcedGC", float64(stats.NumForcedGC))
-	a.storage.SetFloat("NumGC", float64(stats.NumGC))
-	a.storage.SetFloat("OtherSys", float64(stats.OtherSys))
-	a.storage.SetFloat("PauseTotalNs", float64(stats.PauseTotalNs))
-	a.storage.SetFloat("StackInuse", float64(stats.StackInuse))
-	a.storage.SetFloat("StackSys", float64(stats.StackSys))
-	a.storage.SetFloat("Sys", float64(stats.Sys))
-	a.storage.SetFloat("TotalAlloc", float64(stats.TotalAlloc))
-	a.storage.SetFloat("RandomValue", 1000+rand.Float64()*(1000-0))
-	a.storage.IncCounter("PollCount", 1)
+	ctx := context.Background()
+	a.storage.SetFloat(ctx, "Alloc", float64(stats.Alloc))
+	a.storage.SetFloat(ctx, "BuckHashSys", float64(stats.BuckHashSys))
+	a.storage.SetFloat(ctx, "Frees", float64(stats.Frees))
+	a.storage.SetFloat(ctx, "GCCPUFraction", stats.GCCPUFraction)
+	a.storage.SetFloat(ctx, "GCSys", float64(stats.GCSys))
+	a.storage.SetFloat(ctx, "HeapAlloc", float64(stats.HeapAlloc))
+	a.storage.SetFloat(ctx, "HeapIdle", float64(stats.HeapIdle))
+	a.storage.SetFloat(ctx, "HeapInuse", float64(stats.HeapInuse))
+	a.storage.SetFloat(ctx, "HeapObjects", float64(stats.HeapObjects))
+	a.storage.SetFloat(ctx, "HeapReleased", float64(stats.HeapReleased))
+	a.storage.SetFloat(ctx, "HeapSys", float64(stats.HeapSys))
+	a.storage.SetFloat(ctx, "LastGC", float64(stats.LastGC))
+	a.storage.SetFloat(ctx, "Lookups", float64(stats.Lookups))
+	a.storage.SetFloat(ctx, "MCacheInuse", float64(stats.MCacheInuse))
+	a.storage.SetFloat(ctx, "MCacheSys", float64(stats.MCacheSys))
+	a.storage.SetFloat(ctx, "MSpanInuse", float64(stats.MSpanInuse))
+	a.storage.SetFloat(ctx, "MSpanSys", float64(stats.MSpanSys))
+	a.storage.SetFloat(ctx, "Mallocs", float64(stats.Mallocs))
+	a.storage.SetFloat(ctx, "NextGC", float64(stats.NextGC))
+	a.storage.SetFloat(ctx, "NumForcedGC", float64(stats.NumForcedGC))
+	a.storage.SetFloat(ctx, "NumGC", float64(stats.NumGC))
+	a.storage.SetFloat(ctx, "OtherSys", float64(stats.OtherSys))
+	a.storage.SetFloat(ctx, "PauseTotalNs", float64(stats.PauseTotalNs))
+	a.storage.SetFloat(ctx, "StackInuse", float64(stats.StackInuse))
+	a.storage.SetFloat(ctx, "StackSys", float64(stats.StackSys))
+	a.storage.SetFloat(ctx, "Sys", float64(stats.Sys))
+	a.storage.SetFloat(ctx, "TotalAlloc", float64(stats.TotalAlloc))
+	a.storage.SetFloat(ctx, "RandomValue", 1000+rand.Float64()*(1000-0))
+	a.storage.IncCounter(ctx, "PollCount", 1)
 }
 
 func (a *Agent) sendPlain(data *types.Metric) error {
@@ -160,7 +161,7 @@ func (a *Agent) sendAll() error {
 
 	logger.Log.Debug("sendAll")
 
-	metrics := a.storage.GetAll()
+	metrics := a.storage.GetAll(context.Background())
 
 	for _, Item := range metrics {
 		err := a.sendJSON(&Item)

@@ -2,11 +2,16 @@ package server
 
 import (
 	"bytes"
+	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/mailru/easyjson"
 	"github.com/superles/yapmetrics/internal/metric"
+	"github.com/superles/yapmetrics/internal/storage/pgstorage"
 	"github.com/superles/yapmetrics/internal/utils/logger"
 	"html/template"
 	"io"
@@ -64,7 +69,7 @@ func (s *Server) MainPage(res http.ResponseWriter, req *http.Request) {
 
 	check(err)
 
-	collection := s.storage.GetAll()
+	collection := s.storage.GetAll(context.Background())
 
 	var tplBuf bytes.Buffer
 	err = t.Execute(&tplBuf, collection)
@@ -92,7 +97,7 @@ func (s *Server) UpdateGauge(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("cannot parse gauge metric: %s", err), http.StatusBadRequest)
 		return
 	}
-	s.storage.SetFloat(name, floatVar)
+	s.storage.SetFloat(context.Background(), name, floatVar)
 	s.dumpStorage()
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(""))
@@ -125,13 +130,13 @@ func (s *Server) Update(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "отсутсвует значение метрики", http.StatusBadRequest)
 			return
 		}
-		s.storage.SetFloat(updateData.ID, *updateData.Value)
+		s.storage.SetFloat(context.Background(), updateData.ID, *updateData.Value)
 	case metric.CounterMetricTypeName:
 		if updateData.Delta == nil {
 			http.Error(w, "отсутсвует значение метрики", http.StatusBadRequest)
 			return
 		}
-		s.storage.IncCounter(updateData.ID, *updateData.Delta)
+		s.storage.IncCounter(context.Background(), updateData.ID, *updateData.Delta)
 	default:
 		logger.Log.Error("неверный тип метрики")
 		http.Error(w, "неверный тип метрики", http.StatusBadRequest)
@@ -140,7 +145,7 @@ func (s *Server) Update(w http.ResponseWriter, r *http.Request) {
 
 	s.dumpStorage()
 
-	updatedData, _ := s.storage.Get(updateData.ID)
+	updatedData, _ := s.storage.Get(context.Background(), updateData.ID)
 
 	if updatedJSON, err := updatedData.ToJSON(); err == nil {
 		rawBytes, _ := easyjson.Marshal(updatedJSON)
@@ -163,10 +168,62 @@ func (s *Server) UpdateCounter(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("cannot parse counter metric: %s", err), http.StatusBadRequest)
 		return
 	}
-	s.storage.IncCounter(name, intVar)
+	s.storage.IncCounter(context.Background(), name, intVar)
 	s.dumpStorage()
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(""))
+}
+
+func (s *Server) GetPing(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
+
+	dsn, err := pgx.ParseConfig(s.config.DatabaseDsn)
+
+	ps := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable",
+		dsn.Host, dsn.User, dsn.Password, dsn.Database)
+
+	storage := pgstorage.New(s.config.DatabaseDsn)
+
+	all := storage.GetAll(context.Background())
+
+	logger.Log.Sugar().Debug(all)
+
+	db, err := sql.Open("pgx", ps)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = db.Ping()
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rows, err := db.QueryContext(context.Background(), `
+SELECT id as name, type as mType, value as value from metrics	
+`)
+	if err != nil {
+		panic(err)
+	}
+
+	var items []metric.Metric
+
+	for rows.Next() {
+		var item metric.Metric
+		err = rows.Scan(&item.Name, &item.Type, &item.Value)
+		if err != nil {
+			panic(err)
+		}
+		items = append(items, item)
+	}
+
+	defer db.Close()
+
+	w.WriteHeader(http.StatusOK)
+
 }
 
 func (s *Server) GetValue(w http.ResponseWriter, r *http.Request) {
@@ -176,7 +233,7 @@ func (s *Server) GetValue(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	mType := chi.URLParam(r, "type")
 
-	metricItem, ok := s.storage.Get(name)
+	metricItem, ok := s.storage.Get(context.Background(), name)
 
 	if !ok {
 		http.Error(w, "метрика не найдена", http.StatusNotFound)
@@ -228,7 +285,7 @@ func (s *Server) GetJSONValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	metricItem, ok := s.storage.Get(getData.ID)
+	metricItem, ok := s.storage.Get(context.Background(), getData.ID)
 
 	if !ok {
 		http.Error(w, "метрика не найдена", http.StatusNotFound)

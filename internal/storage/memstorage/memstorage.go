@@ -1,6 +1,7 @@
 package memstorage
 
 import (
+	"context"
 	types "github.com/superles/yapmetrics/internal/metric"
 	"sync"
 )
@@ -15,7 +16,7 @@ func New() *MemStorage {
 	return &MemStorage{make(map[string]types.Metric)}
 }
 
-func (s *MemStorage) GetAll() map[string]types.Metric {
+func (s *MemStorage) GetAll(ctx context.Context) map[string]types.Metric {
 	storageSync.Lock()
 	defer storageSync.Unlock()
 	targetMap := make(map[string]types.Metric, len(s.collection))
@@ -28,7 +29,7 @@ func (s *MemStorage) GetAll() map[string]types.Metric {
 	return targetMap
 }
 
-func (s *MemStorage) Get(name string) (types.Metric, bool) {
+func (s *MemStorage) Get(ctx context.Context, name string) (types.Metric, bool) {
 	storageSync.Lock()
 	defer storageSync.Unlock()
 	val, ok := s.collection[name]
@@ -38,19 +39,19 @@ func (s *MemStorage) Get(name string) (types.Metric, bool) {
 	return val, true
 }
 
-func (s *MemStorage) Set(data *types.Metric) {
+func (s *MemStorage) Set(ctx context.Context, data *types.Metric) {
 	storageSync.Lock()
 	defer storageSync.Unlock()
 	s.collection[data.Name] = *data
 }
 
-func (s *MemStorage) SetFloat(Name string, Value float64) {
+func (s *MemStorage) SetFloat(ctx context.Context, Name string, Value float64) {
 	storageSync.Lock()
 	defer storageSync.Unlock()
 	s.collection[Name] = types.Metric{Name: Name, Type: types.GaugeMetricType, Value: Value}
 }
 
-func (s *MemStorage) IncCounter(Name string, Value int64) {
+func (s *MemStorage) IncCounter(ctx context.Context, Name string, Value int64) {
 	storageSync.Lock()
 	defer storageSync.Unlock()
 	val := s.collection[Name]
