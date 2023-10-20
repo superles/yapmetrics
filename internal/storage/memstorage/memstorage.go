@@ -45,6 +45,23 @@ func (s *MemStorage) Set(ctx context.Context, data *types.Metric) {
 	s.collection[data.Name] = *data
 }
 
+func (s *MemStorage) SetAll(ctx context.Context, data *[]types.Metric) error {
+	storageSync.Lock()
+	defer storageSync.Unlock()
+
+	// Copy from the original map to the target map
+	for _, value := range *data {
+		switch value.Type {
+		case types.GaugeMetricType:
+			s.SetFloat(ctx, value.Name, value.Value)
+		case types.CounterMetricType:
+			s.IncCounter(ctx, value.Name, int64(value.Value))
+		}
+	}
+
+	return nil
+}
+
 func (s *MemStorage) SetFloat(ctx context.Context, Name string, Value float64) {
 	storageSync.Lock()
 	defer storageSync.Unlock()

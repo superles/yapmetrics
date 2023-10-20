@@ -157,6 +157,26 @@ func (a *Agent) sendJSON(data *types.Metric) error {
 	return sendErr
 }
 
+func (a *Agent) sendAllJSON() error {
+
+	logger.Log.Debug("sendAllJSON")
+
+	metrics := a.storage.GetAll(context.Background())
+
+	var col types.JSONDataCollection
+	for _, item := range metrics {
+		updatedJSON, err := item.ToJSON()
+		if err != nil {
+			return err
+		}
+		col = append(col, *updatedJSON)
+	}
+	rawBytes, _ := easyjson.Marshal(col)
+	url := "http://" + a.config.Endpoint + "/updates/"
+	_, sendErr := a.send(url, "application/json", rawBytes)
+	return sendErr
+}
+
 func (a *Agent) sendAll() error {
 
 	logger.Log.Debug("sendAll")
@@ -191,6 +211,6 @@ func (a *Agent) Run() {
 	go a.poolTick()
 
 	for range time.Tick(time.Second * time.Duration(a.config.ReportInterval)) {
-		a.sendAll()
+		a.sendAllJSON()
 	}
 }

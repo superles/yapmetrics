@@ -83,7 +83,8 @@ func (m *Metric) ToJSON() (*JSONData, error) {
 	switch m.Type {
 	case GaugeMetricType:
 		model.MType = GaugeMetricTypeName
-		model.Value = &m.Value
+		val := m.Value
+		model.Value = &val
 	case CounterMetricType:
 		model.MType = CounterMetricTypeName
 		val := int64(m.Value)

@@ -23,6 +23,7 @@ type metricProvider interface {
 	GetAll(ctx context.Context) map[string]types.Metric
 	Get(ctx context.Context, name string) (types.Metric, bool)
 	Set(ctx context.Context, data *types.Metric)
+	SetAll(ctx context.Context, data *[]types.Metric) error
 	SetFloat(ctx context.Context, Name string, Value float64)
 	IncCounter(ctx context.Context, Name string, Value int64)
 }
@@ -48,6 +49,7 @@ func New(s metricProvider, cfg *config.Config) *Server {
 
 func (s *Server) registerRoutes() {
 	s.router.Post("/update/", s.Update)
+	s.router.Post("/updates/", s.Updates)
 	s.router.Post("/value/", s.GetJSONValue)
 	s.router.Post("/update/counter/{name}/{value}", s.UpdateCounter)
 	s.router.Post("/update/gauge/{name}/{value}", s.UpdateGauge)

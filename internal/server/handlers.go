@@ -156,6 +156,40 @@ func (s *Server) Update(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func (s *Server) Updates(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Content-Type", "application/json")
+
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			logger.Log.Error(err.Error())
+		}
+	}(r.Body)
+
+	body, _ := io.ReadAll(r.Body)
+
+	item := metric.JSONDataCollection{}
+
+	if err := easyjson.Unmarshal(body, &item); err != nil {
+		logger.Log.Error(err.Error())
+		http.Error(w, fmt.Sprintf("ошибка парсинга json: %s", err), http.StatusBadRequest)
+		return
+	}
+
+	if err := s.storage.SetAll(context.Background(), item.ToMetrics()); err != nil {
+		http.Error(w, fmt.Sprintf("ошибка: %s", err), http.StatusBadRequest)
+	}
+
+	if true {
+		rawBytes, _ := easyjson.Marshal(item)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(rawBytes)
+	} else {
+		http.Error(w, fmt.Sprintf("ошибка конвертации метрики в json: %s", "error"), http.StatusBadRequest)
+	}
+}
+
 func (s *Server) UpdateCounter(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 

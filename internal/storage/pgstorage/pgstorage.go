@@ -115,6 +115,30 @@ func (s *PgStorage) Set(ctx context.Context, data *types.Metric) {
 	}
 }
 
+func (s *PgStorage) SetAll(ctx context.Context, data *[]types.Metric) error {
+	begin, bErr := s.db.BeginTx(ctx, &sql.TxOptions{})
+	if bErr != nil {
+		return bErr
+	}
+	for _, item := range *data {
+
+		switch item.Type {
+		case types.GaugeMetricType:
+			s.SetFloat(ctx, item.Name, item.Value)
+		case types.CounterMetricType:
+			s.IncCounter(ctx, item.Name, int64(item.Value))
+		default:
+			logger.Log.Error("неверный тип метрики")
+		}
+	}
+
+	if err := begin.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *PgStorage) SetFloat(ctx context.Context, Name string, Value float64) {
 	valueStr := strconv.FormatFloat(Value, 'f', -1, 64)
 	query := `
