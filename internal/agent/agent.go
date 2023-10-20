@@ -206,6 +206,8 @@ func (a *Agent) poolTick() {
 
 func (a *Agent) Run() {
 
+	logger.Log.Sugar().Debug("agent run")
+
 	a.capture()
 
 	go a.poolTick()

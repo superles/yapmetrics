@@ -274,6 +274,8 @@ func (s *Server) GetValue(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) GetJSONValue(w http.ResponseWriter, r *http.Request) {
 
+	logger.Log.Sugar().Debug("GetJSONValue")
+
 	w.Header().Set("Content-Type", "application/json")
 
 	defer func(Body io.ReadCloser) {
@@ -295,6 +297,8 @@ func (s *Server) GetJSONValue(w http.ResponseWriter, r *http.Request) {
 
 	metricItem, ok := s.storage.Get(context.Background(), getData.ID)
 
+	logger.Log.Sugar().Debug(metricItem)
+
 	if !ok {
 		http.Error(w, "метрика не найдена", http.StatusNotFound)
 		return
@@ -315,6 +319,7 @@ func (s *Server) GetJSONValue(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write(rawBytes)
 	} else {
 		http.Error(w, fmt.Sprintf("ошибка конвертации метрики в json: %s", err), http.StatusBadRequest)
+		return
 	}
 
 }

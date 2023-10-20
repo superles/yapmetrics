@@ -12,7 +12,7 @@ func parseFlags() Config {
 	var config Config
 
 	flag.StringVar(&config.Endpoint, "a", "localhost:8080", "адрес эндпоинта HTTP-сервера")
-	flag.StringVar(&config.LogLevel, "v", "error", "уровень логирования")
+	flag.StringVar(&config.LogLevel, "v", "debug", "уровень логирования")
 	flag.IntVar(&config.StoreInterval, "i", 300, "интервал сохранения метрик на диск")
 	flag.StringVar(&config.FileStoragePath, "f", filepath.Join(os.TempDir(), "metrics-db.json"), "интервал сохранения метрик на диск")
 	flag.BoolVar(&config.Restore, "r", true, "интервал сохранения метрик на диск")
