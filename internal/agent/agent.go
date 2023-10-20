@@ -214,9 +214,6 @@ func (a *Agent) Run() {
 
 	for range time.Tick(time.Second * time.Duration(a.config.ReportInterval)) {
 		logger.Log.Sugar().Debug("agent run sendAllJSON")
-		err := a.sendAllJSON()
-		if err != nil {
-			return
-		}
+		a.sendAllJSON()
 	}
 }
