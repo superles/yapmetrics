@@ -8,7 +8,6 @@ import (
 )
 
 var storageSync = sync.Mutex{}
-var storageAllSync = sync.Mutex{}
 
 type MemStorage struct {
 	collection map[string]types.Metric
@@ -48,8 +47,6 @@ func (s *MemStorage) Set(ctx context.Context, data *types.Metric) {
 }
 
 func (s *MemStorage) SetAll(ctx context.Context, data *[]types.Metric) error {
-	storageAllSync.Lock()
-	defer storageAllSync.Unlock()
 	for _, value := range *data {
 		logger.Log.Sugar().Debug("SetAll", value)
 		switch value.Type {
