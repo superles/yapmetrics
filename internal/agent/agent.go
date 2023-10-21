@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"context"
 	"errors"
+	"github.com/avast/retry-go/v4"
 	"github.com/mailru/easyjson"
 	"github.com/superles/yapmetrics/internal/agent/client"
 	"github.com/superles/yapmetrics/internal/agent/config"
@@ -38,6 +39,87 @@ func New(s metricProvider, cfg *config.Config) *Agent {
 	}
 	agent := &Agent{storage: s, config: cfg, client: client.NewHTTPAgentClient()}
 	return agent
+}
+
+func (a *Agent) sendWithRetry(url string, contentType string, body []byte) (bool, error) {
+
+	start := time.Now()
+
+	attempts := 4
+
+	response, postErr := retry.DoWithData(
+		func() (*http.Response, error) {
+			resp, err := a.client.Post(url, contentType, body, true)
+
+			if err != nil {
+				if resp == nil {
+					return nil, err
+				} else {
+					return nil, retry.Unrecoverable(err)
+				}
+			}
+
+			return resp, nil
+		},
+		retry.DelayType(func(n uint, err error, config *retry.Config) time.Duration {
+			delay := int(n*2 + 1)
+			return time.Duration(delay) * time.Second
+		}),
+		retry.Attempts(uint(attempts)),
+	)
+
+	finish := time.Since(start)
+
+	var bodyStr string
+	var statusCode int
+	if response != nil {
+
+		bodyReader := response.Body
+
+		contentEncoding := response.Header.Get("Content-Encoding")
+		sendsGzip := strings.Contains(contentEncoding, "gzip")
+
+		if sendsGzip {
+			zr, err := gzip.NewReader(response.Body)
+			if err != nil {
+				return false, err
+			}
+			bodyReader = zr
+		}
+
+		bodyBytes, readErr := io.ReadAll(bodyReader)
+		if readErr != nil {
+			logger.Log.Error(readErr.Error())
+		}
+		bodyStr = string(bodyBytes)
+		statusCode = response.StatusCode
+	}
+
+	logger.Log.Info("send request",
+		zap.String("url", url),
+		zap.String("body", string(body)),
+		zap.Duration("duration", finish),
+		zap.Int("responseCode", statusCode),
+		zap.String("responseBody", bodyStr),
+		zap.Error(postErr),
+	)
+
+	if postErr != nil {
+		return false, postErr
+	}
+
+	defer func() {
+		err := response.Body.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	if response.StatusCode == http.StatusOK {
+		return true, nil
+	}
+
+	return false, errors.New("unknown error")
 }
 
 func (a *Agent) send(url string, contentType string, body []byte) (bool, error) {
@@ -153,7 +235,7 @@ func (a *Agent) sendJSON(data *types.Metric) error {
 	}
 	rawBytes, _ := easyjson.Marshal(updatedJSON)
 	url := "http://" + a.config.Endpoint + "/update/"
-	_, sendErr := a.send(url, "application/json", rawBytes)
+	_, sendErr := a.sendWithRetry(url, "application/json", rawBytes)
 	return sendErr
 }
 
@@ -173,7 +255,7 @@ func (a *Agent) sendAllJSON() error {
 	}
 	rawBytes, _ := easyjson.Marshal(col)
 	url := "http://" + a.config.Endpoint + "/updates/"
-	_, sendErr := a.send(url, "application/json", rawBytes)
+	_, sendErr := a.sendWithRetry(url, "application/json", rawBytes)
 	return sendErr
 }
 
@@ -206,14 +288,14 @@ func (a *Agent) poolTick() {
 
 func (a *Agent) Run() {
 
-	logger.Log.Sugar().Debug("agent run")
+	logger.Log.Debug("agent run")
 
 	a.capture()
 
 	go a.poolTick()
 
 	for range time.Tick(time.Second * time.Duration(a.config.ReportInterval)) {
-		logger.Log.Sugar().Debug("agent run sendAllJSON")
+		logger.Log.Debug("agent run sendAllJSON")
 		a.sendAllJSON()
 	}
 }

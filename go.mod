@@ -3,13 +3,13 @@ module github.com/superles/yapmetrics
 go 1.21
 
 require (
+	github.com/avast/retry-go/v4 v4.5.0
 	github.com/caarlos0/env/v6 v6.10.1
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/gojek/heimdall/v7 v7.0.2
-	github.com/golang/mock v1.6.0
 	github.com/jackc/pgx/v5 v5.4.3
 	github.com/mailru/easyjson v0.7.7
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.2
 	go.uber.org/zap v1.26.0
 )
 

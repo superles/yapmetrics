@@ -24,7 +24,7 @@ const (
 	FatalLevel = "fatal"
 )
 
-var Log *zap.Logger = zap.NewNop()
+var Log *zap.SugaredLogger = zap.NewNop().Sugar()
 
 func parseLevel(level string) string {
 	switch level {
@@ -55,6 +55,6 @@ func Initialize(level string) error {
 		return err
 	}
 	// устанавливаем синглтон
-	Log = zl
+	Log = zl.Sugar()
 	return nil
 }

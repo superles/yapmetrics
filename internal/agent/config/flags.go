@@ -12,7 +12,7 @@ func parseFlags() Config {
 	flag.StringVar(&config.Endpoint, "a", "localhost:8080", "адрес эндпоинта HTTP-сервера")
 	flag.IntVar(&config.ReportInterval, "r", 10, "частота отправки метрик на сервер")
 	flag.IntVar(&config.PollInterval, "p", 2, "частота опроса метрик из пакета runtime")
-	flag.StringVar(&config.LogLevel, "v", "debug", "уровень логирования")
+	flag.StringVar(&config.LogLevel, "v", "error", "уровень логирования")
 
 	var Usage = func() {
 		_, err := fmt.Fprintf(flag.CommandLine.Output(), "Параметры командной строки агента:\n")

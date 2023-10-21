@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/superles/yapmetrics/internal/server"
 	"github.com/superles/yapmetrics/internal/server/config"
-	storage2 "github.com/superles/yapmetrics/internal/storage"
+	"github.com/superles/yapmetrics/internal/storage"
 	"github.com/superles/yapmetrics/internal/storage/memstorage"
 	"github.com/superles/yapmetrics/internal/storage/pgstorage"
 	"github.com/superles/yapmetrics/internal/utils/logger"
@@ -11,12 +11,12 @@ import (
 
 func main() {
 	cfg := config.New()
-	var storage storage2.Storage
-	storage = memstorage.New()
+	var store storage.Storage
+	store = memstorage.New()
 	if len(cfg.DatabaseDsn) > 0 {
-		logger.Log.Sugar().Debug(cfg)
-		storage = pgstorage.New(cfg.DatabaseDsn)
+		logger.Log.Debug(cfg)
+		store = pgstorage.New(cfg.DatabaseDsn)
 	}
-	srv := server.New(storage, cfg)
+	srv := server.New(store, cfg)
 	srv.Run()
 }

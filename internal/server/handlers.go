@@ -275,7 +275,7 @@ func (s *Server) GetValue(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) GetJSONValue(w http.ResponseWriter, r *http.Request) {
 
-	logger.Log.Sugar().Debug("GetJSONValue")
+	logger.Log.Debug("GetJSONValue")
 
 	w.Header().Set("Content-Type", "application/json")
 
@@ -298,7 +298,7 @@ func (s *Server) GetJSONValue(w http.ResponseWriter, r *http.Request) {
 
 	metricItem, ok := s.storage.Get(context.Background(), getData.ID)
 
-	logger.Log.Sugar().Debug(metricItem)
+	logger.Log.Debug(metricItem)
 
 	if !ok {
 		http.Error(w, "метрика не найдена", http.StatusNotFound)
