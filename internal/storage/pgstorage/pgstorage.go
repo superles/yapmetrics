@@ -8,7 +8,6 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	types "github.com/superles/yapmetrics/internal/metric"
 	"github.com/superles/yapmetrics/internal/utils/logger"
-	"strconv"
 )
 
 const tableName = "metrics"
@@ -144,21 +143,12 @@ func (s *PgStorage) SetAll(ctx context.Context, data *[]types.Metric) error {
 }
 
 func (s *PgStorage) SetFloat(ctx context.Context, Name string, Value float64) {
-	valueStr := strconv.FormatFloat(Value, 'f', -1, 64)
+
 	query := `
-INSERT INTO ` + tableName + ` (id, type, value)
-VALUES('` + Name + `',1, ` + valueStr + `)
-on conflict on constraint metrics_pk
-do UPDATE SET type = 1, value = ` + valueStr + `;
+INSERT INTO  ` + tableName + `  (id, type, value) VALUES($1, 1, $2) on conflict on constraint metrics_pk do UPDATE SET type = 1 , value = $2
 `
 
-	result, err := s.db.ExecContext(ctx, query)
-
-	if err != nil {
-		logger.Log.Warn(err.Error())
-	}
-
-	_, err = result.RowsAffected()
+	_, err := s.db.ExecContext(ctx, query, Name, Value)
 
 	if err != nil {
 		logger.Log.Warn(err.Error())
@@ -166,21 +156,14 @@ do UPDATE SET type = 1, value = ` + valueStr + `;
 }
 
 func (s *PgStorage) IncCounter(ctx context.Context, Name string, Value int64) {
-	valueStr := strconv.FormatInt(Value, 10)
 	query := `
 INSERT INTO ` + tableName + ` (id, type, value)
-VALUES('` + Name + `',2, ` + valueStr + `)
+VALUES($1, 2, $2)
 on conflict on constraint metrics_pk
-do UPDATE SET type = 2, value = ` + tableName + `.value + ` + valueStr + `;
+do UPDATE SET type = 2, value = ` + tableName + `.value + $2;
 `
 
-	result, err := s.db.ExecContext(ctx, query)
-
-	if err != nil {
-		logger.Log.Error(err.Error())
-	}
-
-	_, err = result.RowsAffected()
+	_, err := s.db.ExecContext(ctx, query, Name, Value)
 
 	if err != nil {
 		logger.Log.Error(err.Error())
