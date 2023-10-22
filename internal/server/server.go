@@ -36,11 +36,6 @@ type Server struct {
 
 func New(s metricProvider, cfg *config.Config) *Server {
 	router := chi.NewRouter()
-	err := logger.Initialize(cfg.LogLevel)
-	if err != nil {
-		log.Panicln("ошибка инициализации логера", err.Error())
-	}
-
 	router.Use(compress.WithCompressGzip, logging.WithLogging)
 	server := &Server{storage: s, router: router, config: cfg}
 	server.registerRoutes()

@@ -26,17 +26,16 @@ type metricProvider interface {
 	IncCounter(ctx context.Context, Name string, Value int64)
 }
 
+const attempts = 4
+
 type Agent struct {
 	storage metricProvider
 	config  *config.Config
 	client  client.Client
+	logger  *zap.SugaredLogger
 }
 
 func New(s metricProvider, cfg *config.Config) *Agent {
-	err := logger.Initialize(cfg.LogLevel)
-	if err != nil {
-		log.Panicln("ошибка инициализации логера", err.Error())
-	}
 	agent := &Agent{storage: s, config: cfg, client: client.NewHTTPAgentClient()}
 	return agent
 }
@@ -44,8 +43,6 @@ func New(s metricProvider, cfg *config.Config) *Agent {
 func (a *Agent) sendWithRetry(url string, contentType string, body []byte) (bool, error) {
 
 	start := time.Now()
-
-	attempts := 4
 
 	response, postErr := retry.DoWithData(
 		func() (*http.Response, error) {
