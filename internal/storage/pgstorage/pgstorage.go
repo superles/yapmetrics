@@ -90,7 +90,7 @@ func (s *PgStorage) Get(ctx context.Context, name string) (types.Metric, bool) {
 	}
 
 	if err := row.Scan(&item.Name, &item.Type, &item.Value); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) == false {
+		if !errors.Is(err, pgx.ErrNoRows) {
 			logger.Log.Error(err.Error())
 		}
 		return item, false
