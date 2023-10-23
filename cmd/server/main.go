@@ -13,14 +13,16 @@ import (
 func main() {
 	cfg := config.New()
 	var store storage.Storage
+	var err error
 	if len(cfg.DatabaseDsn) != 0 {
-		store = pgstorage.New(cfg.DatabaseDsn)
+		if store, err = pgstorage.New(cfg.DatabaseDsn); err != nil {
+			log.Fatal("ошибка инициализации бд", err.Error())
+		}
 	} else {
 		store = memstorage.New()
 	}
-	err := logger.Initialize(cfg.LogLevel)
-	if err != nil {
-		log.Panicln("ошибка инициализации логера", err.Error())
+	if err = logger.Initialize(cfg.LogLevel); err != nil {
+		log.Fatal("ошибка инициализации логера", err.Error())
 	}
 	srv := server.New(store, cfg)
 	srv.Run()
