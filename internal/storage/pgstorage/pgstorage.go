@@ -154,7 +154,6 @@ on conflict on constraint metrics_pk
 do UPDATE SET type = 2, value = ` + pgx.Identifier{tableName, "value"}.Sanitize() + ` + $2;`
 
 	_, err := s.db.Exec(ctx, query, Name, Value)
-
 	if err != nil {
 		logger.Log.Error(err.Error())
 	}
