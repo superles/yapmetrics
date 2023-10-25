@@ -73,7 +73,7 @@ func WithLogging(h http.Handler) http.Handler {
 
 		duration := time.Since(start)
 
-		logger.Log.Info("receive request",
+		logger.Log.Debug("receive request",
 			zap.String("uri", r.RequestURI),
 			zap.String("method", r.Method),
 			zap.Int("status", responseData.status), // получаем перехваченный код статуса ответа

@@ -3,6 +3,7 @@ package agent
 import (
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/avast/retry-go/v4"
 	"github.com/mailru/easyjson"
@@ -13,6 +14,7 @@ import (
 	"go.uber.org/zap"
 	"io"
 	"math/rand"
+	"net"
 	"net/http"
 	"runtime"
 	"strings"
@@ -46,9 +48,9 @@ func (a *Agent) sendWithRetry(url string, contentType string, body []byte) error
 	response, err := retry.DoWithData(
 		func() (*http.Response, error) {
 			resp, err := a.client.Post(url, contentType, body, true)
-
 			if err != nil {
-				if resp == nil {
+				var opError *net.OpError
+				if errors.As(err, &opError) {
 					return nil, err
 				} else {
 					return nil, retry.Unrecoverable(err)

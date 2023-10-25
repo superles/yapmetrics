@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/mailru/easyjson"
@@ -16,6 +17,11 @@ import (
 
 func printValue(value float64) string {
 	return strconv.FormatFloat(value, 'f', -1, 64)
+}
+
+func setError(w http.ResponseWriter, resError error, resErrorText string, resStatus int) {
+	logger.Log.Error(fmt.Sprintf("ошибка чтения body: %s", resError))
+	http.Error(w, resErrorText, resStatus)
 }
 
 func (s *Server) dumpStorage(ctx context.Context) {
@@ -129,38 +135,36 @@ func (s *Server) Update(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 
 	if err != nil {
-		logger.Log.Error(err.Error())
-		http.Error(w, fmt.Sprintf("ошибка чтения body: %s", err), http.StatusBadRequest)
+		setError(w, err, "ошибка запроса", http.StatusBadRequest)
 		return
 	}
 
 	updateData := metric.JSONData{}
 
 	if err := easyjson.Unmarshal(body, &updateData); err != nil {
-		logger.Log.Error(err.Error())
-		http.Error(w, fmt.Sprintf("ошибка парсинга json: %s", err), http.StatusBadRequest)
+		setError(w, err, "ошибка запроса", http.StatusBadRequest)
 		return
 	}
 
 	switch updateData.MType {
 	case metric.GaugeMetricTypeName:
 		if updateData.Value == nil {
-			http.Error(w, "отсутсвует значение метрики", http.StatusBadRequest)
+			setError(w, errors.New("отсутствует значение метрики"), "ошибка запроса", http.StatusBadRequest)
 			return
 		}
 		if err := s.storage.SetFloat(r.Context(), updateData.ID, *updateData.Value); err != nil {
 			logger.Log.Error(err.Error())
-			http.Error(w, "ошибка сервера", http.StatusBadRequest)
+			http.Error(w, "ошибка сервера", http.StatusInternalServerError)
 			return
 		}
 	case metric.CounterMetricTypeName:
 		if updateData.Delta == nil {
-			http.Error(w, "отсутсвует значение метрики", http.StatusBadRequest)
+			setError(w, errors.New("отсутствует значение метрики"), "ошибка запроса", http.StatusBadRequest)
 			return
 		}
 		if err := s.storage.IncCounter(r.Context(), updateData.ID, *updateData.Delta); err != nil {
 			logger.Log.Error(err.Error())
-			http.Error(w, "ошибка сервера", http.StatusBadRequest)
+			http.Error(w, "ошибка сервера", http.StatusInternalServerError)
 			return
 		}
 	default:
@@ -207,9 +211,11 @@ func (s *Server) Updates(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.storage.SetAll(r.Context(), item.ToMetrics()); err != nil {
+	metrics := item.ToMetrics()
+
+	if err := s.storage.SetAll(r.Context(), &metrics); err != nil {
 		logger.Log.Error(fmt.Sprintf("ошибка setall: %s", err))
-		http.Error(w, "ошибка сервера", http.StatusBadRequest)
+		http.Error(w, "ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 

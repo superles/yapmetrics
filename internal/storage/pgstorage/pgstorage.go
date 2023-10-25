@@ -3,6 +3,7 @@ package pgstorage
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -100,6 +101,44 @@ func (s *PgStorage) Set(ctx context.Context, data *types.Metric) error {
 	_, err := s.db.Exec(ctx, "update "+pgx.Identifier{tableName}.Sanitize()+" set value=$1, type=$2; where id = $3", data.Value, data.Type, data.Name)
 
 	return err
+}
+func (s *PgStorage) SetAllBatch(ctx context.Context, data *[]types.Metric) error {
+	begin, bErr := s.db.BeginTx(ctx, pgx.TxOptions{})
+	if bErr != nil {
+		return bErr
+	}
+	defer func(begin pgx.Tx, ctx context.Context) {
+		err := begin.Rollback(ctx)
+		if err != nil {
+			logger.Log.Error(fmt.Sprintf("rollback error: %s", err))
+		}
+	}(begin, ctx)
+	b := &pgx.Batch{}
+	for _, item := range *data {
+		switch item.Type {
+		case types.CounterMetricType:
+			b.Queue(`INSERT INTO  `+pgx.Identifier{tableName}.Sanitize()+`  (id, type, value)
+VALUES($1, 2, $2) 
+on conflict on constraint metrics_pk do 
+UPDATE SET type = 2 , value = `+pgx.Identifier{tableName, "value"}.Sanitize()+` + $2`, item.Name, item.Value)
+		case types.GaugeMetricType:
+			b.Queue(`INSERT INTO  `+pgx.Identifier{tableName}.Sanitize()+`  (id, type, value) 
+VALUES($1, 1, $2) 
+on conflict on constraint metrics_pk do 
+UPDATE SET type = 1 , value = $2`, item.Name, item.Value)
+		default:
+			logger.Log.Error("неверный тип метрики")
+			return errors.New("неверный тип метрики")
+		}
+	}
+	if err := begin.SendBatch(ctx, b).Close(); err != nil {
+		logger.Log.Error(fmt.Sprintf("batch close error: %s", err))
+		return err
+	}
+	if err := begin.Commit(ctx); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *PgStorage) SetAll(ctx context.Context, data *[]types.Metric) error {

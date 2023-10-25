@@ -11,7 +11,7 @@ type JSONData struct {
 //easyjson:json
 type JSONDataCollection []JSONData
 
-func (v JSONDataCollection) ToMetrics() *[]Metric {
+func (v JSONDataCollection) ToMetrics() []Metric {
 
 	var targetMap []Metric
 
@@ -21,17 +21,19 @@ func (v JSONDataCollection) ToMetrics() *[]Metric {
 		}
 		switch item.MType {
 		case GaugeMetricTypeName:
-			if item.Value != nil {
-				m.Value = *item.Value
+			if item.Value == nil {
+				continue
 			}
+			m.Value = *item.Value
 			m.Type = GaugeMetricType
 		case CounterMetricTypeName:
-			if item.Delta != nil {
-				m.Value = float64(*item.Delta)
+			if item.Delta == nil {
+				continue
 			}
+			m.Value = float64(*item.Delta)
 			m.Type = CounterMetricType
 		}
 		targetMap = append(targetMap, m)
 	}
-	return &targetMap
+	return targetMap
 }
