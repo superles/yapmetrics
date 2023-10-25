@@ -20,7 +20,7 @@ func printValue(value float64) string {
 }
 
 func setError(w http.ResponseWriter, resError error, resErrorText string, resStatus int) {
-	logger.Log.Error(fmt.Sprintf("ошибка чтения body: %s", resError))
+	logger.Log.Error(fmt.Sprintf("ошибка: %s", resError))
 	http.Error(w, resErrorText, resStatus)
 }
 
