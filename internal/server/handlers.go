@@ -2,19 +2,13 @@ package server
 
 import (
 	"bytes"
-	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5"
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/mailru/easyjson"
 	"github.com/superles/yapmetrics/internal/metric"
 	"github.com/superles/yapmetrics/internal/utils/logger"
 	"html/template"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
 )
@@ -33,7 +27,7 @@ func (s *Server) dumpStorage() {
 	}
 }
 
-func (s *Server) MainPage(res http.ResponseWriter, req *http.Request) {
+func (s *Server) MainPage(res http.ResponseWriter, r *http.Request) {
 	res.Header().Set("Content-Type", "text/html")
 	const tpl = `
 <!DOCTYPE html>
@@ -54,35 +48,51 @@ func (s *Server) MainPage(res http.ResponseWriter, req *http.Request) {
 	</body>
 </html>`
 
-	check := func(err error) {
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
 	t, err := template.New("webpage").Funcs(
 		template.FuncMap{
 			"printValue": printValue,
 		},
 	).Parse(tpl)
 
-	check(err)
+	if err != nil {
+		logger.Log.Error(fmt.Sprintf("ошибка: %s", err))
+		http.Error(res, "ошибка сервера", http.StatusBadRequest)
+		return
+	}
 
-	collection := s.storage.GetAll(context.Background())
+	var collection map[string]metric.Metric
+
+	collection, err = s.storage.GetAll(r.Context())
+
+	if err != nil {
+		logger.Log.Error(fmt.Sprintf("ошибка: %s", err))
+		http.Error(res, "ошибка сервера", http.StatusBadRequest)
+		return
+	}
 
 	var tplBuf bytes.Buffer
 	err = t.Execute(&tplBuf, collection)
 
-	check(err)
+	if err != nil {
+		logger.Log.Error(fmt.Sprintf("ошибка: %s", err))
+		http.Error(res, "ошибка сервера", http.StatusBadRequest)
+		return
+	}
 
 	res.WriteHeader(http.StatusOK)
-	_, _ = res.Write(tplBuf.Bytes())
+	_, err = res.Write(tplBuf.Bytes())
+	if err != nil {
+		logger.Log.Error(fmt.Sprintf("ошибка записи body: %s", err))
+	}
 }
 
 func (s *Server) BadRequest(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusBadRequest)
-	_, _ = w.Write([]byte(""))
+	_, err := w.Write([]byte(""))
+	if err != nil {
+		logger.Log.Error(fmt.Sprintf("ошибка записи body: %s", err))
+	}
 }
 
 func (s *Server) UpdateGauge(w http.ResponseWriter, r *http.Request) {
@@ -96,24 +106,26 @@ func (s *Server) UpdateGauge(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("cannot parse gauge metric: %s", err), http.StatusBadRequest)
 		return
 	}
-	s.storage.SetFloat(context.Background(), name, floatVar)
+	s.storage.SetFloat(r.Context(), name, floatVar)
 	s.dumpStorage()
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(""))
+	_, err = w.Write([]byte(""))
+	if err != nil {
+		logger.Log.Error(fmt.Sprintf("ошибка записи body: %s", err))
+	}
 }
 
 func (s *Server) Update(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			logger.Log.Error(err.Error())
-		}
-	}(r.Body)
+	body, err := io.ReadAll(r.Body)
 
-	body, _ := io.ReadAll(r.Body)
+	if err != nil {
+		logger.Log.Error(err.Error())
+		http.Error(w, fmt.Sprintf("ошибка чтения body: %s", err), http.StatusBadRequest)
+		return
+	}
 
 	updateData := metric.JSONData{}
 
@@ -129,29 +141,41 @@ func (s *Server) Update(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "отсутсвует значение метрики", http.StatusBadRequest)
 			return
 		}
-		s.storage.SetFloat(context.Background(), updateData.ID, *updateData.Value)
+		if err := s.storage.SetFloat(r.Context(), updateData.ID, *updateData.Value); err != nil {
+			logger.Log.Error(err.Error())
+			http.Error(w, "ошибка сервера", http.StatusBadRequest)
+			return
+		}
 	case metric.CounterMetricTypeName:
 		if updateData.Delta == nil {
 			http.Error(w, "отсутсвует значение метрики", http.StatusBadRequest)
 			return
 		}
-		s.storage.IncCounter(context.Background(), updateData.ID, *updateData.Delta)
+		if err := s.storage.IncCounter(r.Context(), updateData.ID, *updateData.Delta); err != nil {
+			logger.Log.Error(err.Error())
+			http.Error(w, "ошибка сервера", http.StatusBadRequest)
+			return
+		}
 	default:
-		logger.Log.Error("неверный тип метрики")
+		logger.Log.Error(fmt.Sprintf("неверный тип метрики: %s", updateData.MType))
 		http.Error(w, "неверный тип метрики", http.StatusBadRequest)
 		return
 	}
 
 	s.dumpStorage()
 
-	updatedData, _ := s.storage.Get(context.Background(), updateData.ID)
+	updatedData, _ := s.storage.Get(r.Context(), updateData.ID)
 
 	if updatedJSON, err := updatedData.ToJSON(); err == nil {
 		rawBytes, _ := easyjson.Marshal(updatedJSON)
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write(rawBytes)
+		_, err = w.Write(rawBytes)
+		if err != nil {
+			logger.Log.Error(fmt.Sprintf("ошибка записи body: %s", err))
+		}
 	} else {
-		http.Error(w, fmt.Sprintf("ошибка конвертации метрики в json: %s", err), http.StatusBadRequest)
+		logger.Log.Error(fmt.Sprintf("ошибка конвертации метрики в json: %s", err))
+		http.Error(w, "ошибка сервера", http.StatusBadRequest)
 	}
 
 }
@@ -160,34 +184,37 @@ func (s *Server) Updates(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			logger.Log.Error(err.Error())
-		}
-	}(r.Body)
+	body, err := io.ReadAll(r.Body)
 
-	body, _ := io.ReadAll(r.Body)
+	if err != nil {
+		logger.Log.Error(fmt.Sprintf("ошибка чтения body: %s", err))
+		http.Error(w, "ошибка сервера", http.StatusBadRequest)
+		return
+	}
 
 	item := metric.JSONDataCollection{}
 
 	if err := easyjson.Unmarshal(body, &item); err != nil {
-		logger.Log.Error(err.Error())
-		http.Error(w, fmt.Sprintf("ошибка парсинга json: %s", err), http.StatusBadRequest)
+		logger.Log.Error(fmt.Sprintf("ошибка парсинга json: %s", err))
+		http.Error(w, "ошибка сервера", http.StatusBadRequest)
 		return
 	}
 
-	if err := s.storage.SetAll(context.Background(), item.ToMetrics()); err != nil {
-		http.Error(w, fmt.Sprintf("ошибка: %s", err), http.StatusBadRequest)
+	if err := s.storage.SetAll(r.Context(), item.ToMetrics()); err != nil {
+		logger.Log.Error(fmt.Sprintf("ошибка setall: %s", err))
+		http.Error(w, "ошибка сервера", http.StatusBadRequest)
 		return
 	}
 
-	if true {
-		rawBytes, _ := easyjson.Marshal(item)
+	if rawBytes, err := easyjson.Marshal(item); err == nil {
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write(rawBytes)
+		_, err = w.Write(rawBytes)
+		if err != nil {
+			logger.Log.Error(fmt.Sprintf("ошибка записи body: %s", err))
+		}
 	} else {
-		http.Error(w, fmt.Sprintf("ошибка конвертации метрики в json: %s", "error"), http.StatusBadRequest)
+		logger.Log.Error(fmt.Sprintf("ошибка сериализации: %s", err))
+		http.Error(w, "ошибка сервера", http.StatusBadRequest)
 	}
 }
 
@@ -202,34 +229,26 @@ func (s *Server) UpdateCounter(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("cannot parse counter metric: %s", err), http.StatusBadRequest)
 		return
 	}
-	s.storage.IncCounter(context.Background(), name, intVar)
+	s.storage.IncCounter(r.Context(), name, intVar)
 	s.dumpStorage()
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(""))
+	_, err = w.Write([]byte(""))
+	if err != nil {
+		logger.Log.Error(fmt.Sprintf("ошибка записи body: %s", err))
+	}
 }
 
 func (s *Server) GetPing(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
 
-	dsn, _ := pgx.ParseConfig(s.config.DatabaseDsn)
-
-	ps := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable",
-		dsn.Host, dsn.User, dsn.Password, dsn.Database)
-
-	db, err := sql.Open("pgx", ps)
+	err := s.storage.Ping(r.Context())
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		logger.Log.Error(fmt.Sprintf("ошибка подключения к бд: %s", err))
+		http.Error(w, "ошибка сервера", http.StatusInternalServerError)
 		return
 	}
-	err = db.Ping()
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer db.Close()
 
 	w.WriteHeader(http.StatusOK)
 
@@ -242,9 +261,10 @@ func (s *Server) GetValue(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	mType := chi.URLParam(r, "type")
 
-	metricItem, ok := s.storage.Get(context.Background(), name)
+	metricItem, err := s.storage.Get(r.Context(), name)
 
-	if !ok {
+	if err != nil {
+		logger.Log.Warn(fmt.Sprintf("метрика не найдена: %s, ошибка: %s", name, err))
 		http.Error(w, "метрика не найдена", http.StatusNotFound)
 		return
 	}
@@ -252,7 +272,7 @@ func (s *Server) GetValue(w http.ResponseWriter, r *http.Request) {
 	metricType, metricTypeError := metric.StringToType(mType)
 
 	if metricTypeError != nil || metricItem.Type != metricType {
-		fmt.Println(errors.New("тип метрики не совпадает"), metricItem)
+		logger.Log.Error(fmt.Sprintf("тип метрики не совпадает: %d != %d, имя: %s", metricItem.Type, metricType, name))
 		http.Error(w, "тип метрики не совпадает", http.StatusBadRequest)
 		return
 	}
@@ -266,27 +286,23 @@ func (s *Server) GetValue(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 
-	_, writeErr := w.Write([]byte(value))
-	if writeErr != nil {
-		return
+	if _, err := w.Write([]byte(value)); err != nil {
+		logger.Log.Error(fmt.Sprintf("ошибка записи body: %s", err))
 	}
 
 }
 
 func (s *Server) GetJSONValue(w http.ResponseWriter, r *http.Request) {
 
-	logger.Log.Debug("GetJSONValue")
-
 	w.Header().Set("Content-Type", "application/json")
 
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			logger.Log.Error(err.Error())
-		}
-	}(r.Body)
+	body, err := io.ReadAll(r.Body)
 
-	body, _ := io.ReadAll(r.Body)
+	if err != nil {
+		logger.Log.Error(err.Error())
+		http.Error(w, fmt.Sprintf("ошибка чтения body: %s", err), http.StatusBadRequest)
+		return
+	}
 
 	getData := metric.JSONData{}
 
@@ -296,11 +312,10 @@ func (s *Server) GetJSONValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	metricItem, ok := s.storage.Get(context.Background(), getData.ID)
+	metricItem, metricErr := s.storage.Get(r.Context(), getData.ID)
 
-	logger.Log.Debug(metricItem)
-
-	if !ok {
+	if metricErr != nil {
+		logger.Log.Warn(fmt.Sprintf("метрика не найдена: %s, ошибка: %s", getData.ID, metricErr))
 		http.Error(w, "метрика не найдена", http.StatusNotFound)
 		return
 	}
@@ -308,19 +323,30 @@ func (s *Server) GetJSONValue(w http.ResponseWriter, r *http.Request) {
 	metricType, metricTypeError := metric.StringToType(getData.MType)
 
 	if metricTypeError != nil || metricItem.Type != metricType {
-		fmt.Println(errors.New("тип метрики не совпадает"), metricItem)
+		logger.Log.Warn(fmt.Sprintf("тип метрики не совпадает: %d != %d, имя: %s", metricItem.Type, metricType, getData.ID))
 		http.Error(w, "тип метрики не совпадает", http.StatusBadRequest)
 		return
 	}
 
-	if updatedJSON, err := metricItem.ToJSON(); err == nil {
-		rawBytes, _ := easyjson.Marshal(updatedJSON)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write(rawBytes)
-	} else {
-		http.Error(w, fmt.Sprintf("ошибка конвертации метрики в json: %s", err), http.StatusBadRequest)
+	var updatedJSON *metric.JSONData
+
+	updatedJSON, err = metricItem.ToJSON()
+
+	if err != nil {
+		logger.Log.Error(fmt.Sprintf("ошибка конвертации метрики в json: %s", err))
+		http.Error(w, "ошибка сервера", http.StatusBadRequest)
 		return
+	}
+
+	if rawBytes, err := easyjson.Marshal(updatedJSON); err == nil {
+		w.WriteHeader(http.StatusOK)
+		_, err = w.Write(rawBytes)
+		if err != nil {
+			logger.Log.Error(fmt.Sprintf("ошибка записи body: %s", err))
+		}
+	} else {
+		logger.Log.Error(fmt.Sprintf("ошибка сериализации: %s", err))
+		http.Error(w, "ошибка сервера", http.StatusBadRequest)
 	}
 
 }

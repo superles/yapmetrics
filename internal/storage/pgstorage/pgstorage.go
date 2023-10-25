@@ -50,21 +50,19 @@ func checkTable(db *pgxpool.Pool) {
 );`)
 }
 
-func (s *PgStorage) GetAll(ctx context.Context) map[string]types.Metric {
+func (s *PgStorage) GetAll(ctx context.Context) (map[string]types.Metric, error) {
 
 	items := make(map[string]types.Metric)
 
 	rows, err := s.db.Query(ctx, `
 SELECT id, type, value from `+pgx.Identifier{tableName}.Sanitize()+`	
 `)
-	if rows.Err() != nil {
-		logger.Log.Error(err.Error())
-		return items
+	if err != nil {
+		return nil, err
 	}
 
-	if err != nil {
-		logger.Log.Error(err.Error())
-		return items
+	if rows.Err() != nil {
+		return nil, err
 	}
 
 	for rows.Next() {
@@ -77,35 +75,31 @@ SELECT id, type, value from `+pgx.Identifier{tableName}.Sanitize()+`
 		items[item.Name] = item
 	}
 
-	return items
+	return items, nil
 }
 
-func (s *PgStorage) Get(ctx context.Context, name string) (types.Metric, bool) {
+func (s *PgStorage) Get(ctx context.Context, name string) (types.Metric, error) {
 
 	item := types.Metric{}
 
 	row := s.db.QueryRow(ctx, `SELECT id, type, value from `+pgx.Identifier{tableName}.Sanitize()+` where id=$1`, name)
+
 	if row == nil {
-		return item, false
+		return item, errors.New("объект row пустой")
 	}
 
 	if err := row.Scan(&item.Name, &item.Type, &item.Value); err != nil {
-		if !errors.Is(err, pgx.ErrNoRows) {
-			logger.Log.Error(err.Error())
-		}
-		return item, false
+		return item, err
 	}
 
-	return item, true
+	return item, nil
 }
 
-func (s *PgStorage) Set(ctx context.Context, data *types.Metric) {
+func (s *PgStorage) Set(ctx context.Context, data *types.Metric) error {
 
 	_, err := s.db.Exec(ctx, "update "+pgx.Identifier{tableName}.Sanitize()+" set value=$1, type=$2; where id = $3", data.Value, data.Type, data.Name)
 
-	if err != nil {
-		logger.Log.Error(err.Error())
-	}
+	return err
 }
 
 func (s *PgStorage) SetAll(ctx context.Context, data *[]types.Metric) error {
@@ -117,9 +111,13 @@ func (s *PgStorage) SetAll(ctx context.Context, data *[]types.Metric) error {
 
 		switch item.Type {
 		case types.GaugeMetricType:
-			s.SetFloat(ctx, item.Name, item.Value)
+			if err := s.SetFloat(ctx, item.Name, item.Value); err != nil {
+				return err
+			}
 		case types.CounterMetricType:
-			s.IncCounter(ctx, item.Name, int64(item.Value))
+			if err := s.IncCounter(ctx, item.Name, int64(item.Value)); err != nil {
+				return err
+			}
 		default:
 			logger.Log.Error("неверный тип метрики")
 			if err := begin.Rollback(ctx); err != nil {
@@ -136,25 +134,25 @@ func (s *PgStorage) SetAll(ctx context.Context, data *[]types.Metric) error {
 	return nil
 }
 
-func (s *PgStorage) SetFloat(ctx context.Context, Name string, Value float64) {
+func (s *PgStorage) SetFloat(ctx context.Context, Name string, Value float64) error {
 
 	query := `INSERT INTO  ` + pgx.Identifier{tableName}.Sanitize() + `  (id, type, value) VALUES($1, 1, $2) on conflict on constraint metrics_pk do UPDATE SET type = 1 , value = $2`
 
 	_, err := s.db.Exec(ctx, query, Name, Value)
 
-	if err != nil {
-		logger.Log.Error(err.Error())
-	}
+	return err
 }
 
-func (s *PgStorage) IncCounter(ctx context.Context, Name string, Value int64) {
+func (s *PgStorage) IncCounter(ctx context.Context, Name string, Value int64) error {
 	query := `INSERT INTO ` + pgx.Identifier{tableName}.Sanitize() + ` (id, type, value)
 VALUES($1, 2, $2)
 on conflict on constraint metrics_pk
 do UPDATE SET type = 2, value = ` + pgx.Identifier{tableName, "value"}.Sanitize() + ` + $2;`
 
 	_, err := s.db.Exec(ctx, query, Name, Value)
-	if err != nil {
-		logger.Log.Error(err.Error())
-	}
+	return err
+}
+
+func (s *PgStorage) Ping(ctx context.Context) error {
+	return s.db.Ping(context.Background())
 }

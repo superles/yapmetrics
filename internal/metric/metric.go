@@ -1,7 +1,7 @@
 package metric
 
 import (
-	"errors"
+	"fmt"
 	"strconv"
 )
 
@@ -31,7 +31,7 @@ func (m *Metric) String() (string, error) {
 	case CounterMetricType:
 		return strconv.FormatFloat(m.Value, 'f', 0, 64), nil
 	default:
-		return "", errors.New("unsupported metric type")
+		return "", fmt.Errorf("ошибка вывода значения метрики: %d", m.Type)
 	}
 }
 
@@ -42,7 +42,7 @@ func StringToType(mType string) (int, error) {
 	case CounterMetricTypeName:
 		return CounterMetricType, nil
 	default:
-		return 0, errors.New("ошибка вывода значения метрики")
+		return 0, fmt.Errorf("ошибка вывода значения метрики: %s", mType)
 	}
 }
 
@@ -53,7 +53,7 @@ func TypeToString(mType int) (string, error) {
 	case CounterMetricType:
 		return CounterMetricTypeName, nil
 	default:
-		return "", errors.New("тип метрики не существует")
+		return "", fmt.Errorf("тип метрики не существует: %d", mType)
 	}
 }
 
@@ -73,7 +73,7 @@ func FromJSON(data *JSONData) (*Metric, error) {
 		}
 
 	default:
-		return model, errors.New("тип метрики не существует")
+		return model, fmt.Errorf("тип метрики не существует: %s", data.MType)
 	}
 	return model, nil
 }
@@ -90,7 +90,7 @@ func (m *Metric) ToJSON() (*JSONData, error) {
 		val := int64(m.Value)
 		model.Delta = &val
 	default:
-		return model, errors.New("тип метрики не существует")
+		return model, fmt.Errorf("тип метрики не существует: %d", m.Type)
 	}
 	return model, nil
 }

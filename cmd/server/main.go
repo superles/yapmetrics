@@ -25,5 +25,7 @@ func main() {
 		log.Fatal("ошибка инициализации логера", err.Error())
 	}
 	srv := server.New(store, cfg)
-	srv.Run()
+	if err = srv.Run(); err != nil {
+		log.Fatal("ошибка запуска сервера", err.Error())
+	}
 }

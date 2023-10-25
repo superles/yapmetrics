@@ -21,10 +21,14 @@ func (v JSONDataCollection) ToMetrics() *[]Metric {
 		}
 		switch item.MType {
 		case GaugeMetricTypeName:
-			m.Value = *item.Value
+			if item.Value != nil {
+				m.Value = *item.Value
+			}
 			m.Type = GaugeMetricType
 		case CounterMetricTypeName:
-			m.Value = float64(*item.Delta)
+			if item.Delta != nil {
+				m.Value = float64(*item.Delta)
+			}
 			m.Type = CounterMetricType
 		}
 		targetMap = append(targetMap, m)

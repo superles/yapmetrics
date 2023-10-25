@@ -17,7 +17,7 @@ func parseFlags() Config {
 	flag.StringVar(&config.FileStoragePath, "f", filepath.Join(os.TempDir(), "metrics-db.json"), "интервал сохранения метрик на диск")
 	flag.BoolVar(&config.Restore, "r", true, "интервал сохранения метрик на диск")
 	//example: postgresql://test_user:test_user@localhost/test_db
-	flag.StringVar(&config.DatabaseDsn, "d", "", "интервал сохранения метрик на диск")
+	flag.StringVar(&config.DatabaseDsn, "d", "", "строка подключения к базе данных в формате dsn")
 
 	var Usage = func() {
 		_, err := fmt.Fprintf(flag.CommandLine.Output(), "Параметры командной строки сервера:\n")

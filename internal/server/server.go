@@ -11,7 +11,6 @@ import (
 	"github.com/superles/yapmetrics/internal/server/middleware/logging"
 	"github.com/superles/yapmetrics/internal/utils/logger"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -20,12 +19,13 @@ import (
 )
 
 type metricProvider interface {
-	GetAll(ctx context.Context) map[string]types.Metric
-	Get(ctx context.Context, name string) (types.Metric, bool)
-	Set(ctx context.Context, data *types.Metric)
+	GetAll(ctx context.Context) (map[string]types.Metric, error)
+	Get(ctx context.Context, name string) (types.Metric, error)
+	Set(ctx context.Context, data *types.Metric) error
 	SetAll(ctx context.Context, data *[]types.Metric) error
-	SetFloat(ctx context.Context, Name string, Value float64)
-	IncCounter(ctx context.Context, Name string, Value int64)
+	SetFloat(ctx context.Context, Name string, Value float64) error
+	IncCounter(ctx context.Context, Name string, Value int64) error
+	Ping(ctx context.Context) error
 }
 
 type Server struct {
@@ -68,9 +68,11 @@ func (s *Server) load() error {
 		if err := dec.Decode(&m); err == io.EOF {
 			break
 		} else if err != nil {
-			log.Fatal(err)
+			return err
 		}
-		s.storage.Set(context.Background(), &m)
+		if err := s.storage.Set(context.Background(), &m); err != nil {
+			return err
+		}
 	}
 
 	if err := file.Close(); err != nil {
@@ -89,7 +91,11 @@ func (s *Server) dump() error {
 		return err
 	}
 	encoder := json.NewEncoder(file)
-	for _, metric := range s.storage.GetAll(context.Background()) {
+	metrics, err := s.storage.GetAll(context.Background())
+	if err != nil {
+		return err
+	}
+	for _, metric := range metrics {
 		err := encoder.Encode(&metric)
 		if err != nil {
 			return fileErr
@@ -116,11 +122,12 @@ func (s *Server) startDumpWatcher() {
 	}
 }
 
-func (s *Server) Run() {
+func (s *Server) Run() error {
 
 	if s.config.Restore && s.config.DatabaseDsn == "" {
 		if err := s.load(); err != nil {
-			logger.Log.Fatal(err.Error())
+			logger.Log.Error(err.Error())
+			return err
 		}
 	}
 
@@ -145,13 +152,15 @@ func (s *Server) Run() {
 	logger.Log.Info("Server Stopped")
 
 	if err := srv.Shutdown(context.Background()); err != nil {
-		log.Fatalf("Server Shutdown Failed:%+v", err)
+		return err
 	}
 
 	logger.Log.Info("Server Exited Properly")
 
 	if err := s.dump(); err != nil {
-		logger.Log.Fatal(err.Error())
+		return err
 	}
+
+	return nil
 
 }
