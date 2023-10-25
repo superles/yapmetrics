@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	types "github.com/superles/yapmetrics/internal/metric"
@@ -10,7 +9,6 @@ import (
 	"github.com/superles/yapmetrics/internal/server/middleware/compress"
 	"github.com/superles/yapmetrics/internal/server/middleware/logging"
 	"github.com/superles/yapmetrics/internal/utils/logger"
-	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -26,6 +24,8 @@ type metricProvider interface {
 	SetFloat(ctx context.Context, Name string, Value float64) error
 	IncCounter(ctx context.Context, Name string, Value int64) error
 	Ping(ctx context.Context) error
+	Dump(ctx context.Context, path string) error
+	Restore(ctx context.Context, path string) error
 }
 
 type Server struct {
@@ -56,65 +56,27 @@ func (s *Server) registerRoutes() {
 	s.router.Get("/", s.MainPage)
 }
 
-func (s *Server) load() error {
-	file, fileErr := os.OpenFile(s.config.FileStoragePath, os.O_RDONLY|os.O_CREATE, 0666)
-	if fileErr != nil {
-		return fileErr
+func (s *Server) load(ctx context.Context) error {
+	if len(s.config.FileStoragePath) != 0 {
+		return s.storage.Restore(ctx, s.config.FileStoragePath)
 	}
-	dec := json.NewDecoder(file)
-
-	for {
-		var m types.Metric
-		if err := dec.Decode(&m); err == io.EOF {
-			break
-		} else if err != nil {
-			return err
-		}
-		if err := s.storage.Set(context.Background(), &m); err != nil {
-			return err
-		}
-	}
-
-	if err := file.Close(); err != nil {
-		return err
-	}
-	logger.Log.Info("load success")
 	return nil
 }
 
-func (s *Server) dump() error {
-	file, fileErr := os.OpenFile(s.config.FileStoragePath, os.O_WRONLY|os.O_CREATE, 0666)
-	if fileErr != nil {
-		return fileErr
+func (s *Server) dump(ctx context.Context) error {
+	if len(s.config.FileStoragePath) != 0 {
+		return s.storage.Dump(ctx, s.config.FileStoragePath)
 	}
-	if err := file.Truncate(0); err != nil {
-		return err
-	}
-	encoder := json.NewEncoder(file)
-	metrics, err := s.storage.GetAll(context.Background())
-	if err != nil {
-		return err
-	}
-	for _, metric := range metrics {
-		err := encoder.Encode(&metric)
-		if err != nil {
-			return fileErr
-		}
-	}
-	if err := file.Close(); err != nil {
-		return err
-	}
-	logger.Log.Info("dump success")
 	return nil
 }
 
-func (s *Server) startDumpWatcher() {
+func (s *Server) startDumpWatcher(ctx context.Context) {
 	if s.config.StoreInterval > 0 {
 		ticker := time.NewTicker(time.Second * time.Duration(s.config.StoreInterval))
 		go func() {
 			for t := range ticker.C {
 				logger.Log.Debug(fmt.Sprintf("Tick at: %v\n", t.UTC()))
-				if err := s.dump(); err != nil {
+				if err := s.dump(ctx); err != nil {
 					logger.Log.Fatal(err.Error())
 				}
 			}
@@ -122,12 +84,14 @@ func (s *Server) startDumpWatcher() {
 	}
 }
 
-func (s *Server) Run() error {
+func (s *Server) Run(ctx context.Context) error {
 
 	if s.config.Restore && s.config.DatabaseDsn == "" {
-		if err := s.load(); err != nil {
+		if err := s.load(ctx); err != nil {
 			logger.Log.Error(err.Error())
 			return err
+		} else {
+			logger.Log.Debug("бд загружена успешно")
 		}
 	}
 
@@ -145,19 +109,19 @@ func (s *Server) Run() error {
 		}
 	}()
 
-	s.startDumpWatcher()
+	s.startDumpWatcher(ctx)
 
 	logger.Log.Info("Server Started")
 	<-done
 	logger.Log.Info("Server Stopped")
 
-	if err := srv.Shutdown(context.Background()); err != nil {
+	if err := srv.Shutdown(ctx); err != nil {
 		return err
 	}
 
 	logger.Log.Info("Server Exited Properly")
 
-	if err := s.dump(); err != nil {
+	if err := s.dump(ctx); err != nil {
 		return err
 	}
 

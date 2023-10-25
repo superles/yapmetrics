@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/mailru/easyjson"
@@ -17,10 +18,10 @@ func printValue(value float64) string {
 	return strconv.FormatFloat(value, 'f', -1, 64)
 }
 
-func (s *Server) dumpStorage() {
-	if s.config.StoreInterval == 0 {
+func (s *Server) dumpStorage(ctx context.Context) {
+	if s.config.StoreInterval == 0 && len(s.config.DatabaseDsn) == 0 {
 		go func() {
-			if err := s.dump(); err != nil {
+			if err := s.dump(ctx); err != nil {
 				logger.Log.Fatal(err.Error())
 			}
 		}()
@@ -86,7 +87,7 @@ func (s *Server) MainPage(res http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) BadRequest(w http.ResponseWriter, r *http.Request) {
+func (s *Server) BadRequest(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusBadRequest)
 	_, err := w.Write([]byte(""))
@@ -103,11 +104,17 @@ func (s *Server) UpdateGauge(w http.ResponseWriter, r *http.Request) {
 
 	floatVar, err := strconv.ParseFloat(value, 64)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("cannot parse gauge metric: %s", err), http.StatusBadRequest)
+		logger.Log.Error(fmt.Sprintf("cannot parse gauge metric: %s", err))
+		http.Error(w, "ошибка сервера", http.StatusBadRequest)
 		return
 	}
-	s.storage.SetFloat(r.Context(), name, floatVar)
-	s.dumpStorage()
+	err = s.storage.SetFloat(r.Context(), name, floatVar)
+	if err != nil {
+		logger.Log.Error(fmt.Sprintf("ошибка обновления gauge: %s", err))
+		http.Error(w, "ошибка сервера", http.StatusBadRequest)
+		return
+	}
+	s.dumpStorage(r.Context())
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write([]byte(""))
 	if err != nil {
@@ -162,7 +169,7 @@ func (s *Server) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.dumpStorage()
+	s.dumpStorage(r.Context())
 
 	updatedData, _ := s.storage.Get(r.Context(), updateData.ID)
 
@@ -206,6 +213,8 @@ func (s *Server) Updates(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	s.dumpStorage(r.Context())
+
 	if rawBytes, err := easyjson.Marshal(item); err == nil {
 		w.WriteHeader(http.StatusOK)
 		_, err = w.Write(rawBytes)
@@ -226,11 +235,17 @@ func (s *Server) UpdateCounter(w http.ResponseWriter, r *http.Request) {
 
 	intVar, err := strconv.ParseInt(value, 10, 64)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("cannot parse counter metric: %s", err), http.StatusBadRequest)
+		logger.Log.Error(fmt.Sprintf("cannot parse counter metric: %s", err))
+		http.Error(w, "ошибка сервера", http.StatusBadRequest)
 		return
 	}
-	s.storage.IncCounter(r.Context(), name, intVar)
-	s.dumpStorage()
+	err = s.storage.IncCounter(r.Context(), name, intVar)
+	if err != nil {
+		logger.Log.Error(fmt.Sprintf("ошибка обновления counter: %s", err))
+		http.Error(w, "ошибка сервера", http.StatusBadRequest)
+		return
+	}
+	s.dumpStorage(r.Context())
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write([]byte(""))
 	if err != nil {
@@ -277,10 +292,13 @@ func (s *Server) GetValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	value, err := metricItem.String()
+	var value string
+
+	value, err = metricItem.String()
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		logger.Log.Error(fmt.Sprintf("ошибка конвертирования metric->string: %s", err))
+		http.Error(w, "ошибка сервера", http.StatusBadRequest)
 		return
 	}
 
@@ -299,23 +317,23 @@ func (s *Server) GetJSONValue(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 
 	if err != nil {
-		logger.Log.Error(err.Error())
-		http.Error(w, fmt.Sprintf("ошибка чтения body: %s", err), http.StatusBadRequest)
+		logger.Log.Error(fmt.Sprintf("ошибка чтения body: %s", err))
+		http.Error(w, "ошибка сервера", http.StatusBadRequest)
 		return
 	}
 
 	getData := metric.JSONData{}
 
 	if err := easyjson.Unmarshal(body, &getData); err != nil {
-		logger.Log.Error(err.Error())
-		http.Error(w, fmt.Sprintf("ошибка парсинга json: %s", err), http.StatusBadRequest)
+		logger.Log.Error(fmt.Sprintf("ошибка парсинга json: %s", err))
+		http.Error(w, "ошибка сервера", http.StatusBadRequest)
 		return
 	}
 
 	metricItem, metricErr := s.storage.Get(r.Context(), getData.ID)
 
 	if metricErr != nil {
-		logger.Log.Warn(fmt.Sprintf("метрика не найдена: %s, ошибка: %s", getData.ID, metricErr))
+		logger.Log.Warn(fmt.Sprintf("метрика не найдена: %s, ошибка: %s", getData.ID, err))
 		http.Error(w, "метрика не найдена", http.StatusNotFound)
 		return
 	}
@@ -346,7 +364,6 @@ func (s *Server) GetJSONValue(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		logger.Log.Error(fmt.Sprintf("ошибка сериализации: %s", err))
-		http.Error(w, "ошибка сервера", http.StatusBadRequest)
 	}
 
 }

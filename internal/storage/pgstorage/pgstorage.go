@@ -154,5 +154,13 @@ do UPDATE SET type = 2, value = ` + pgx.Identifier{tableName, "value"}.Sanitize(
 }
 
 func (s *PgStorage) Ping(ctx context.Context) error {
-	return s.db.Ping(context.Background())
+	return s.db.Ping(ctx)
+}
+
+func (s *PgStorage) Dump(ctx context.Context, path string) error {
+	return nil
+}
+
+func (s *PgStorage) Restore(ctx context.Context, path string) error {
+	return nil
 }

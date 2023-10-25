@@ -2,7 +2,6 @@ package compress
 
 import (
 	"compress/gzip"
-	"github.com/superles/yapmetrics/internal/utils/logger"
 	"io"
 	"net/http"
 	"strings"
@@ -124,7 +123,5 @@ func WithCompressGzip(h http.Handler) http.Handler {
 
 		// передаём управление хендлеру
 		h.ServeHTTP(ow, r)
-
-		logger.Log.Debug("finish")
 	})
 }

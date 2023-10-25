@@ -16,4 +16,6 @@ type Storage interface {
 	SetFloat(ctx context.Context, Name string, Value float64) error
 	IncCounter(ctx context.Context, Name string, Value int64) error
 	Ping(ctx context.Context) error
+	Dump(ctx context.Context, path string) error
+	Restore(ctx context.Context, path string) error
 }

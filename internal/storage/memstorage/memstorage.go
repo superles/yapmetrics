@@ -2,9 +2,12 @@ package memstorage
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	types "github.com/superles/yapmetrics/internal/metric"
 	"github.com/superles/yapmetrics/internal/utils/logger"
+	"io"
+	"os"
 	"sync"
 )
 
@@ -87,5 +90,56 @@ func (s *MemStorage) IncCounter(ctx context.Context, Name string, Value int64) e
 }
 
 func (s *MemStorage) Ping(ctx context.Context) error {
+	return nil
+}
+
+func (s *MemStorage) Dump(ctx context.Context, path string) error {
+	file, fileErr := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
+	if fileErr != nil {
+		return fileErr
+	}
+	if err := file.Truncate(0); err != nil {
+		return err
+	}
+	encoder := json.NewEncoder(file)
+	metrics, err := s.GetAll(ctx)
+	if err != nil {
+		return err
+	}
+	for _, metric := range metrics {
+		err := encoder.Encode(&metric)
+		if err != nil {
+			return fileErr
+		}
+	}
+	if err := file.Close(); err != nil {
+		return err
+	}
+	logger.Log.Info("dump success")
+	return nil
+}
+
+func (s *MemStorage) Restore(ctx context.Context, path string) error {
+	file, fileErr := os.OpenFile(path, os.O_RDONLY|os.O_CREATE, 0666)
+	if fileErr != nil {
+		return fileErr
+	}
+	dec := json.NewDecoder(file)
+	for {
+		var m types.Metric
+		if err := dec.Decode(&m); err == io.EOF {
+			break
+		} else if err != nil {
+			return err
+		}
+		if err := s.Set(context.Background(), &m); err != nil {
+			return err
+		}
+	}
+
+	if err := file.Close(); err != nil {
+		return err
+	}
+	logger.Log.Info("load success")
 	return nil
 }
