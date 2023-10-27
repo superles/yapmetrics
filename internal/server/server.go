@@ -6,6 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	types "github.com/superles/yapmetrics/internal/metric"
 	"github.com/superles/yapmetrics/internal/server/config"
+	"github.com/superles/yapmetrics/internal/server/middleware/auth"
 	"github.com/superles/yapmetrics/internal/server/middleware/compress"
 	"github.com/superles/yapmetrics/internal/server/middleware/logging"
 	"github.com/superles/yapmetrics/internal/utils/logger"
@@ -36,7 +37,7 @@ type Server struct {
 
 func New(s metricProvider, cfg *config.Config) *Server {
 	router := chi.NewRouter()
-	router.Use(compress.WithCompressGzip, logging.WithLogging)
+	router.Use(compress.WithCompressGzip, logging.WithLogging, auth.WithAuth(cfg.SecretKey))
 	server := &Server{storage: s, router: router, config: cfg}
 	server.registerRoutes()
 	return server
