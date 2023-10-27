@@ -337,7 +337,7 @@ func (s *Server) GetJSONValue(w http.ResponseWriter, r *http.Request) {
 	metricItem, metricErr := s.storage.Get(r.Context(), getData.ID)
 
 	if metricErr != nil {
-		logger.Log.Warn(fmt.Sprintf("метрика не найдена: %s, ошибка: %s", getData.ID, err))
+		logger.Log.Warn(fmt.Sprintf("метрика не найдена: %s, ошибка: %s", getData.ID, err.Error()))
 		http.Error(w, "метрика не найдена", http.StatusNotFound)
 		return
 	}
