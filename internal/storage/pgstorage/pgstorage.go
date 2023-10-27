@@ -102,19 +102,19 @@ func (s *PgStorage) Set(ctx context.Context, data *types.Metric) error {
 
 	return err
 }
-func (s *PgStorage) SetAllBatch(ctx context.Context, data *[]types.Metric) error {
+func (s *PgStorage) SetAll(ctx context.Context, data []types.Metric) error {
 	begin, bErr := s.db.BeginTx(ctx, pgx.TxOptions{})
 	if bErr != nil {
 		return bErr
 	}
 	defer func(begin pgx.Tx, ctx context.Context) {
 		err := begin.Rollback(ctx)
-		if err != nil {
+		if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
 			logger.Log.Error(fmt.Sprintf("rollback error: %s", err))
 		}
 	}(begin, ctx)
 	b := &pgx.Batch{}
-	for _, item := range *data {
+	for _, item := range data {
 		switch item.Type {
 		case types.CounterMetricType:
 			b.Queue(`INSERT INTO  `+pgx.Identifier{tableName}.Sanitize()+`  (id, type, value)
@@ -141,12 +141,12 @@ UPDATE SET type = 1 , value = $2`, item.Name, item.Value)
 	return nil
 }
 
-func (s *PgStorage) SetAll(ctx context.Context, data *[]types.Metric) error {
-	begin, bErr := s.db.BeginTx(ctx, pgx.TxOptions{})
-	if bErr != nil {
-		return bErr
+func (s *PgStorage) setAllOld(ctx context.Context, data []types.Metric) error {
+	begin, err := s.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
 	}
-	for _, item := range *data {
+	for _, item := range data {
 
 		switch item.Type {
 		case types.GaugeMetricType:

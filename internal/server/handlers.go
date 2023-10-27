@@ -211,9 +211,7 @@ func (s *Server) Updates(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	metrics := item.ToMetrics()
-
-	if err := s.storage.SetAll(r.Context(), &metrics); err != nil {
+	if err := s.storage.SetAll(r.Context(), item.ToMetrics()); err != nil {
 		logger.Log.Error(fmt.Sprintf("ошибка setall: %s", err))
 		http.Error(w, "ошибка сервера", http.StatusInternalServerError)
 		return
@@ -285,7 +283,7 @@ func (s *Server) GetValue(w http.ResponseWriter, r *http.Request) {
 	metricItem, err := s.storage.Get(r.Context(), name)
 
 	if err != nil {
-		logger.Log.Warn(fmt.Sprintf("метрика не найдена: %s, ошибка: %s", name, err))
+		logger.Log.Warn(fmt.Sprintf("метрика не найдена: %s, ошибка: %s", name, err.Error()))
 		http.Error(w, "метрика не найдена", http.StatusNotFound)
 		return
 	}
