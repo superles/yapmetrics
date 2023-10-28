@@ -11,7 +11,7 @@ import (
 	"sync"
 )
 
-var storageSync = sync.Mutex{}
+var storageSync = sync.RWMutex{}
 
 type MemStorage struct {
 	collection map[string]types.Metric
@@ -22,8 +22,8 @@ func New() *MemStorage {
 }
 
 func (s *MemStorage) GetAll(ctx context.Context) (map[string]types.Metric, error) {
-	storageSync.Lock()
-	defer storageSync.Unlock()
+	storageSync.RLock()
+	defer storageSync.RUnlock()
 	targetMap := make(map[string]types.Metric, len(s.collection))
 
 	// Copy from the original map to the target map
@@ -35,8 +35,8 @@ func (s *MemStorage) GetAll(ctx context.Context) (map[string]types.Metric, error
 }
 
 func (s *MemStorage) Get(ctx context.Context, name string) (types.Metric, error) {
-	storageSync.Lock()
-	defer storageSync.Unlock()
+	storageSync.RLock()
+	defer storageSync.RUnlock()
 	val, ok := s.collection[name]
 	if !ok {
 		return types.Metric{}, errors.New("метрика не найдена")

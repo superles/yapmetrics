@@ -22,23 +22,22 @@ func (w *rwWrapper) Write(p []byte) (int, error) {
 func (w *rwWrapper) WriteHeader(status int) {
 	w.status = status
 }
-
 func (w *rwWrapper) Header() http.Header {
 	return w.header
 }
-
 func WithAuth(key string) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		logFn := func(w http.ResponseWriter, r *http.Request) {
-
+			if len(key) == 0 {
+				h.ServeHTTP(w, r)
+				return
+			}
 			wrapper := rwWrapper{
 				ResponseWriter: w,
 				status:         200,
 				header:         make(http.Header),
 			}
-
 			var bodyStr string
-
 			if r.Method == http.MethodPost {
 				bodyBytes, _ := io.ReadAll(r.Body)
 				err := r.Body.Close()
@@ -48,27 +47,22 @@ func WithAuth(key string) func(h http.Handler) http.Handler {
 				r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 				bodyStr = string(bodyBytes)
 			}
-
-			hash := r.Header.Get("HashSHA256")
-			if len(key) != 0 && len(hash) != 0 {
+			inHash := r.Header.Get("HashSHA256")
+			if len(inHash) != 0 {
 				expectedHash := hasher.Encode(bodyStr, key)
-				if len(hash) == 0 {
+				if len(inHash) == 0 {
 					logger.Log.Error("пустой хеш в запросе")
 					http.Error(w, "", http.StatusBadRequest)
 					return
-				} else if hash != expectedHash {
+				} else if inHash != expectedHash {
 					logger.Log.Error("неправильный хеш в запросе")
 					http.Error(w, "", http.StatusBadRequest)
 					return
 				}
 			}
-
 			h.ServeHTTP(&wrapper, r)
-
-			if len(key) != 0 {
-				hash := hasher.Encode(string(wrapper.buf.Bytes()), key)
-				w.Header().Set("HashSHA256", hash)
-			}
+			outHash := hasher.Encode(string(wrapper.buf.Bytes()), key)
+			w.Header().Set("HashSHA256", outHash)
 			for hKey, hVal := range wrapper.header {
 				val := hVal[0]
 				w.Header().Set(hKey, val)
