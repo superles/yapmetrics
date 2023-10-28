@@ -44,13 +44,10 @@ func (s *MemStorage) Get(ctx context.Context, name string) (types.Metric, error)
 	return val, nil
 }
 
-func (s *MemStorage) Set(ctx context.Context, data *types.Metric) error {
+func (s *MemStorage) Set(ctx context.Context, data types.Metric) error {
 	storageSync.Lock()
 	defer storageSync.Unlock()
-	if data == nil {
-		return errors.New("метрика содержит пустой объект")
-	}
-	s.collection[data.Name] = *data
+	s.collection[data.Name] = data
 	return nil
 }
 
@@ -132,7 +129,7 @@ func (s *MemStorage) Restore(ctx context.Context, path string) error {
 		} else if err != nil {
 			return err
 		}
-		if err := s.Set(context.Background(), &m); err != nil {
+		if err := s.Set(context.Background(), m); err != nil {
 			return err
 		}
 	}
