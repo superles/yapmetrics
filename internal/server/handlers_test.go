@@ -1,7 +1,9 @@
 package server
 
 import (
+	"context"
 	"github.com/stretchr/testify/require"
+	"github.com/superles/yapmetrics/internal/server/config"
 	"github.com/superles/yapmetrics/internal/storage"
 	"github.com/superles/yapmetrics/internal/storage/memstorage"
 	"net/http"
@@ -12,7 +14,8 @@ import (
 func TestServer_GetValue(t *testing.T) {
 
 	repo := memstorage.New()
-	serv := New(repo)
+	cfg := config.New()
+	serv := New(repo, cfg)
 	ts := httptest.NewServer(serv.router)
 	defer ts.Close()
 
@@ -50,7 +53,8 @@ func TestServer_GetValue(t *testing.T) {
 func TestServer_UpdateCounter(t *testing.T) {
 
 	repo := memstorage.New()
-	serv := New(repo)
+	cfg := config.New()
+	serv := New(repo, cfg)
 	ts := httptest.NewServer(serv.router)
 	defer ts.Close()
 
@@ -80,7 +84,7 @@ func TestServer_UpdateCounter(t *testing.T) {
 			req, err := http.NewRequest(test.method, ts.URL+test.url, nil)
 			require.NoError(t, err)
 			resp, err := ts.Client().Do(req)
-			result, _ := repo.Get("testSetGet226")
+			result, _ := repo.Get(context.Background(), "testSetGet226")
 			if test.want.value != result.Value {
 				t.Error("значение в хранилище не соответсвует")
 			}

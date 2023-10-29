@@ -2,7 +2,6 @@ package compress
 
 import (
 	"compress/gzip"
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -124,7 +123,5 @@ func WithCompressGzip(h http.Handler) http.Handler {
 
 		// передаём управление хендлеру
 		h.ServeHTTP(ow, r)
-
-		fmt.Println("finish")
 	})
 }

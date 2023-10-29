@@ -1,6 +1,7 @@
 package memstorage
 
 import (
+	"context"
 	types "github.com/superles/yapmetrics/internal/metric"
 	"reflect"
 	"testing"
@@ -38,7 +39,7 @@ func TestMemStorage_GetAll(t *testing.T) {
 			s := &MemStorage{
 				collection: test.initMap,
 			}
-			if got := s.GetAll(); reflect.DeepEqual(got, test.want) == test.isEqual {
+			if got, _ := s.GetAll(context.Background()); reflect.DeepEqual(got, test.want) == test.isEqual {
 				t.Errorf("GetAll() = %v, want %v", got, test.want)
 			}
 		})

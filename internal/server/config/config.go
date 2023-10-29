@@ -8,6 +8,7 @@ type Config struct {
 	StoreInterval   int    `env:"STORE_INTERVAL"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	Restore         bool   `env:"RESTORE"`
+	DatabaseDsn     string `env:"DATABASE_DSN"`
 }
 
 var (
@@ -52,6 +53,12 @@ func New() *Config {
 			instance.Restore = envConfig.Restore
 		} else {
 			instance.Restore = flagConfig.Restore
+		}
+
+		if len(envConfig.DatabaseDsn) > 0 {
+			instance.DatabaseDsn = envConfig.DatabaseDsn
+		} else {
+			instance.DatabaseDsn = flagConfig.DatabaseDsn
 		}
 	})
 
