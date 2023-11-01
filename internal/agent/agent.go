@@ -37,7 +37,7 @@ type Agent struct {
 }
 
 func New(s metricProvider, cfg *config.Config) *Agent {
-	agent := &Agent{storage: s, config: cfg, client: client.NewHTTPAgentClient()}
+	agent := &Agent{storage: s, config: cfg, client: client.NewHTTPAgentClient(cfg.SecretKey)}
 	return agent
 }
 
