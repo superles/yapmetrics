@@ -61,7 +61,7 @@ func WithAuth(key string) func(h http.Handler) http.Handler {
 				}
 			}
 			h.ServeHTTP(&wrapper, r)
-			outHash := hasher.Encode(string(wrapper.buf.Bytes()), key)
+			outHash := hasher.Encode(wrapper.buf.String(), key)
 			w.Header().Set("HashSHA256", outHash)
 			for hKey, hVal := range wrapper.header {
 				val := hVal[0]
