@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"github.com/superles/yapmetrics/internal/agent"
 	"github.com/superles/yapmetrics/internal/agent/config"
 	"github.com/superles/yapmetrics/internal/storage/memstorage"
@@ -15,5 +16,10 @@ func main() {
 	if err != nil {
 		log.Panicln("ошибка инициализации логера", err.Error())
 	}
-	agent.New(storage, cfg).Run()
+
+	appContext := context.Background()
+	if err = agent.New(storage, cfg).Run(appContext); err != nil {
+		log.Fatal("ошибка запуска агента", err.Error())
+	}
+
 }

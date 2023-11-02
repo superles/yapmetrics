@@ -24,6 +24,8 @@ type Metric struct {
 	Value float64 //Значение метрики
 }
 
+type Collection map[string]Metric
+
 func (m *Metric) String() (string, error) {
 	switch m.Type {
 	case GaugeMetricType:
