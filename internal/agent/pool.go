@@ -13,7 +13,7 @@ import (
 type response struct {
 	Status   int
 	Error    error
-	WorkerId int
+	WorkerID int
 }
 
 func (a *Agent) generator(ctx context.Context) <-chan types.Collection {
@@ -58,7 +58,7 @@ Loop:
 		case metrics, ok := <-input:
 
 			if !ok {
-				results <- response{WorkerId: id, Error: errors.New("input channel closed")}
+				results <- response{WorkerID: id, Error: errors.New("input channel closed")}
 				return
 			}
 
@@ -66,7 +66,7 @@ Loop:
 			for _, item := range metrics {
 				updatedJSON, err := item.ToJSON()
 				if err != nil {
-					results <- response{WorkerId: id, Error: err}
+					results <- response{WorkerID: id, Error: err}
 					logger.Log.Debug("loop continue")
 					continue Loop
 				}
@@ -74,7 +74,7 @@ Loop:
 			}
 			rawBytes, err := easyjson.Marshal(col)
 			if err != nil {
-				results <- response{WorkerId: id, Error: err}
+				results <- response{WorkerID: id, Error: err}
 				logger.Log.Debug("loop continue")
 				continue Loop
 			}
@@ -82,7 +82,7 @@ Loop:
 			sendErr := a.sendWithRetry(url, "application/json", rawBytes)
 			if sendErr != nil {
 				logger.Log.Debug("loop continue")
-				results <- response{WorkerId: id, Error: sendErr}
+				results <- response{WorkerID: id, Error: sendErr}
 			}
 		}
 	}
@@ -107,7 +107,7 @@ func (a *Agent) sendPoolTicker(ctx context.Context) {
 	go func() {
 		for resp := range resultChan {
 			if resp.Error != nil {
-				logger.Log.Error("worker error", resp.WorkerId, resp.Error.Error())
+				logger.Log.Error("worker error", resp.WorkerID, resp.Error.Error())
 			}
 		}
 	}()
