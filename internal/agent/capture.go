@@ -50,7 +50,7 @@ func (a *Agent) captureRuntime(ctx context.Context) error {
 	metrics = append(metrics, metric.Metric{Name: "Sys", Type: metric.GaugeMetricType, Value: float64(stats.Sys)})
 	metrics = append(metrics, metric.Metric{Name: "TotalAlloc", Type: metric.GaugeMetricType, Value: float64(stats.TotalAlloc)})
 	metrics = append(metrics, metric.Metric{Name: "RandomValue", Type: metric.GaugeMetricType, Value: generateRandomValue()})
-	metrics = append(metrics, metric.Metric{Name: "RandomValue", Type: metric.CounterMetricType, Value: 1})
+	metrics = append(metrics, metric.Metric{Name: "PollCount", Type: metric.CounterMetricType, Value: 1})
 
 	err := a.storage.SetAll(ctx, metrics)
 	if err != nil {
