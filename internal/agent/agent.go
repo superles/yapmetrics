@@ -288,18 +288,6 @@ func (a *Agent) Run(ctx context.Context) error {
 
 	logger.Log.Debug("agent run")
 
-	err := a.captureRuntime(ctx)
-
-	if err != nil {
-		return err
-	}
-
-	err = a.capturePsutil(ctx)
-
-	if err != nil {
-		return err
-	}
-
 	reportInterval := time.Second * time.Duration(a.config.ReportInterval)
 	pollInterval := time.Second * time.Duration(a.config.PollInterval)
 

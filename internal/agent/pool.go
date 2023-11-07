@@ -16,41 +16,36 @@ type response struct {
 	WorkerID int
 }
 
-func (a *Agent) generator(ctx context.Context, reportInterval time.Duration) <-chan types.Collection {
-	ch := make(chan types.Collection, 1)
-	go func() {
-		ticker := time.NewTicker(reportInterval)
-		defer func() {
-			ticker.Stop()
-			close(ch)
-			logger.Log.Debug("stop generator ticker and close input channel")
-		}()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				metrics, err := a.storage.GetAll(ctx)
-				if err != nil {
-					logger.Log.Error("generator GetAll error", err.Error())
-					continue
-				}
-
-				select {
-				case _, ok := <-ch:
-					if !ok {
-						logger.Log.Error("канал генератора закрыт")
-						return
-					}
-					logger.Log.Debug("generator free chanel")
-				default:
-				}
-
-				ch <- metrics
-			}
-		}
+func (a *Agent) generator(ch chan types.Collection, ctx context.Context, reportInterval time.Duration) {
+	ticker := time.NewTicker(reportInterval)
+	defer func() {
+		ticker.Stop()
+		logger.Log.Debug("stop generator ticker")
 	}()
-	return ch
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			metrics, err := a.storage.GetAll(ctx)
+			if err != nil {
+				logger.Log.Error("generator GetAll error", err.Error())
+				continue
+			}
+
+			select {
+			case _, ok := <-ch:
+				if !ok {
+					logger.Log.Error("канал генератора закрыт")
+					return
+				}
+				logger.Log.Debug("generator free chanel")
+			default:
+			}
+
+			ch <- metrics
+		}
+	}
 }
 
 func (a *Agent) worker(id int, ctx context.Context, input <-chan types.Collection, results chan<- response) {
@@ -82,7 +77,8 @@ func (a *Agent) worker(id int, ctx context.Context, input <-chan types.Collectio
 
 func (a *Agent) sendPoolTicker(ctx context.Context, reportInterval time.Duration) {
 	var wg sync.WaitGroup
-	requestChan := a.generator(ctx, reportInterval)
+	requestChan := make(chan types.Collection, 1)
+	go a.generator(requestChan, ctx, reportInterval)
 	resultChan := make(chan response)
 	for i := 1; i <= int(a.config.RateLimit); i++ {
 		go func(workerID int) {
@@ -94,6 +90,7 @@ func (a *Agent) sendPoolTicker(ctx context.Context, reportInterval time.Duration
 	go func() {
 		wg.Wait()
 		logger.Log.Debug("free response channel")
+		close(requestChan)
 		close(resultChan)
 	}()
 	go func() {
