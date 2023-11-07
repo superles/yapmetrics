@@ -16,11 +16,11 @@ type response struct {
 	WorkerID int
 }
 
-func (a *Agent) generator(ch chan types.Collection, ctx context.Context, reportInterval time.Duration) {
+func (a *Agent) generator(ctx context.Context, ch chan<- types.Collection, reportInterval time.Duration) {
 	ticker := time.NewTicker(reportInterval)
 	defer func() {
 		ticker.Stop()
-		logger.Log.Debug("stop generator ticker")
+		logger.Log.Debug("stop generator ticker and close input channel")
 	}()
 	for {
 		select {
@@ -32,18 +32,27 @@ func (a *Agent) generator(ch chan types.Collection, ctx context.Context, reportI
 				logger.Log.Error("generator GetAll error", err.Error())
 				continue
 			}
+			ch <- metrics
+		}
+	}
+}
 
-			select {
-			case _, ok := <-ch:
-				if !ok {
-					logger.Log.Error("канал генератора закрыт")
-					return
-				}
-				logger.Log.Debug("generator free chanel")
-			default:
+func (a *Agent) dispatcher(ctx context.Context, input <-chan types.Collection, out chan<- types.Collection) {
+	for {
+		select {
+		case <-ctx.Done():
+			return // Выход из горутины при отмене контекста
+		case metrics, ok := <-input:
+			if !ok {
+				logger.Log.Debug("dispatcher input channel closed")
+				return
 			}
 
-			ch <- metrics
+			if len(out) >= int(a.config.RateLimit) {
+				continue
+			}
+
+			out <- metrics
 		}
 	}
 }
@@ -78,19 +87,22 @@ func (a *Agent) worker(id int, ctx context.Context, input <-chan types.Collectio
 func (a *Agent) sendPoolTicker(ctx context.Context, reportInterval time.Duration) {
 	var wg sync.WaitGroup
 	requestChan := make(chan types.Collection, 1)
-	go a.generator(requestChan, ctx, reportInterval)
-	resultChan := make(chan response)
+	go a.generator(ctx, requestChan, reportInterval)
+	dispatcherChan := make(chan types.Collection, a.config.RateLimit)
+	go a.dispatcher(ctx, requestChan, dispatcherChan)
+	resultChan := make(chan response, a.config.RateLimit)
 	for i := 1; i <= int(a.config.RateLimit); i++ {
 		go func(workerID int) {
-			a.worker(workerID, ctx, requestChan, resultChan)
+			a.worker(workerID, ctx, dispatcherChan, resultChan)
 			wg.Done()
 		}(i)
 	}
 	wg.Add(int(a.config.RateLimit))
 	go func() {
 		wg.Wait()
-		logger.Log.Debug("free response channel")
+		logger.Log.Debug("free all channels")
 		close(requestChan)
+		close(dispatcherChan)
 		close(resultChan)
 	}()
 	go func() {
