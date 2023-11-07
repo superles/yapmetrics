@@ -3,7 +3,7 @@ package agent
 import (
 	"context"
 	"errors"
-	"github.com/mailru/easyjson"
+	"fmt"
 	types "github.com/superles/yapmetrics/internal/metric"
 	"github.com/superles/yapmetrics/internal/utils/logger"
 	"sync"
@@ -16,10 +16,10 @@ type response struct {
 	WorkerID int
 }
 
-func (a *Agent) generator(ctx context.Context) <-chan types.Collection {
+func (a *Agent) generator(ctx context.Context, reportInterval time.Duration) <-chan types.Collection {
 	ch := make(chan types.Collection, 1)
 	go func() {
-		ticker := time.NewTicker(time.Second * time.Duration(a.config.ReportInterval))
+		ticker := time.NewTicker(reportInterval)
 		defer func() {
 			ticker.Stop()
 			close(ch)
@@ -37,7 +37,11 @@ func (a *Agent) generator(ctx context.Context) <-chan types.Collection {
 				}
 
 				select {
-				case <-ch:
+				case _, ok := <-ch:
+					if !ok {
+						logger.Log.Error("канал генератора закрыт")
+						return
+					}
 					logger.Log.Debug("generator free chanel")
 				default:
 				}
@@ -50,47 +54,35 @@ func (a *Agent) generator(ctx context.Context) <-chan types.Collection {
 }
 
 func (a *Agent) worker(id int, ctx context.Context, input <-chan types.Collection, results chan<- response) {
-Loop:
 	for {
 		select {
 		case <-ctx.Done():
 			return // Выход из горутины при отмене контекста
 		case metrics, ok := <-input:
-
 			if !ok {
 				results <- response{WorkerID: id, Error: errors.New("input channel closed")}
 				return
 			}
 
-			var col types.JSONDataCollection
-			for _, item := range metrics {
-				updatedJSON, err := item.ToJSON()
-				if err != nil {
-					results <- response{WorkerID: id, Error: err}
-					logger.Log.Debug("loop continue")
-					continue Loop
-				}
-				col = append(col, *updatedJSON)
-			}
-			rawBytes, err := easyjson.Marshal(col)
+			var rawBytes, err = compressMetrics(metrics)
 			if err != nil {
 				results <- response{WorkerID: id, Error: err}
-				logger.Log.Debug("loop continue")
-				continue Loop
+				logger.Log.Debug("ошибка сжатия метрик", err.Error())
+				continue
 			}
-			url := "http://" + a.config.Endpoint + "/updates/"
-			sendErr := a.sendWithRetry(url, "application/json", rawBytes)
-			if sendErr != nil {
-				logger.Log.Debug("loop continue")
-				results <- response{WorkerID: id, Error: sendErr}
+			url := fmt.Sprintf("http://%s/updates/", a.config.Endpoint)
+			err = a.sendWithRetry(url, "application/json", rawBytes)
+			if err != nil {
+				logger.Log.Debug("ошибка отправки метрик", err.Error())
+				results <- response{WorkerID: id, Error: err}
 			}
 		}
 	}
 }
 
-func (a *Agent) sendPoolTicker(ctx context.Context) {
+func (a *Agent) sendPoolTicker(ctx context.Context, reportInterval time.Duration) {
 	var wg sync.WaitGroup
-	requestChan := a.generator(ctx)
+	requestChan := a.generator(ctx, reportInterval)
 	resultChan := make(chan response)
 	for i := 1; i <= int(a.config.RateLimit); i++ {
 		go func(workerID int) {

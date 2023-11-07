@@ -6,20 +6,20 @@ import (
 	"encoding/hex"
 )
 
-func Encode(data string, secret string) string {
+func Encode(data []byte, secret []byte) string {
 
 	// Создаем hmac sha256 с ключом
-	h := hmac.New(sha256.New, []byte(secret))
-	h.Write([]byte(data))
+	h := hmac.New(sha256.New, secret)
+	h.Write(data)
 	sha := hex.EncodeToString(h.Sum(nil))
 	return sha
 }
 
-func Decode(data []byte, secret string) string {
+func Decode(data []byte, secret []byte) string {
 
 	// Создаем hmac sha256 с ключом
-	h := hmac.New(sha256.New, []byte(secret))
-	h.Write([]byte(data))
+	h := hmac.New(sha256.New, secret)
+	h.Write(data)
 	sha := hex.EncodeToString(h.Sum(nil))
 	return sha
 }

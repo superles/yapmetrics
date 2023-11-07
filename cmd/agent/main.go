@@ -7,6 +7,9 @@ import (
 	"github.com/superles/yapmetrics/internal/storage/memstorage"
 	"github.com/superles/yapmetrics/internal/utils/logger"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
@@ -17,9 +20,15 @@ func main() {
 		log.Panicln("ошибка инициализации логера", err.Error())
 	}
 
-	appContext := context.Background()
+	appContext, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	if err = agent.New(storage, cfg).Run(appContext); err != nil {
 		log.Fatal("ошибка запуска агента", err.Error())
 	}
+	logger.Log.Info("Agent Started")
+	<-appContext.Done()
+	logger.Log.Info("Agent Stopped")
+	logger.Log.Info("Agent Exited Properly")
 
 }

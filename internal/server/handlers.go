@@ -350,11 +350,9 @@ func (s *Server) GetJSONValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var updatedJSON *metric.JSONData
+	var updatedJSON metric.JSONData
 
-	updatedJSON, err = metricItem.ToJSON()
-
-	if err != nil {
+	if updatedJSON, err = metricItem.ToJSON(); err != nil {
 		logger.Log.Error(fmt.Sprintf("ошибка конвертации метрики в json: %s", err))
 		http.Error(w, "ошибка сервера", http.StatusBadRequest)
 		return

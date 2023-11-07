@@ -4,159 +4,86 @@ import (
 	"context"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
+	"github.com/superles/yapmetrics/internal/metric"
 	"math/rand"
 	"runtime"
 	"strconv"
 )
 
+func randFloat(min, max float64) float64 {
+	return min + rand.Float64()*(max-min)
+}
+func generateRandomValue() float64 {
+	return randFloat(0, 1000)
+}
+
 func (a *Agent) captureRuntime(ctx context.Context) error {
 	var stats runtime.MemStats
 	runtime.ReadMemStats(&stats)
-	err := a.storage.SetFloat(ctx, "Alloc", float64(stats.Alloc))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "BuckHashSys", float64(stats.BuckHashSys))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "Frees", float64(stats.Frees))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "GCCPUFraction", stats.GCCPUFraction)
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "GCSys", float64(stats.GCSys))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "HeapAlloc", float64(stats.HeapAlloc))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "HeapIdle", float64(stats.HeapIdle))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "HeapInuse", float64(stats.HeapInuse))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "HeapObjects", float64(stats.HeapObjects))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "HeapReleased", float64(stats.HeapReleased))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "HeapSys", float64(stats.HeapSys))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "LastGC", float64(stats.LastGC))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "Lookups", float64(stats.Lookups))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "MCacheInuse", float64(stats.MCacheInuse))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "MCacheSys", float64(stats.MCacheSys))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "MSpanInuse", float64(stats.MSpanInuse))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "MSpanSys", float64(stats.MSpanSys))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "Mallocs", float64(stats.Mallocs))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "NextGC", float64(stats.NextGC))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "NumForcedGC", float64(stats.NumForcedGC))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "NumGC", float64(stats.NumGC))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "OtherSys", float64(stats.OtherSys))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "PauseTotalNs", float64(stats.PauseTotalNs))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "StackInuse", float64(stats.StackInuse))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "StackSys", float64(stats.StackSys))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "Sys", float64(stats.Sys))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "TotalAlloc", float64(stats.TotalAlloc))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "RandomValue", 1000+rand.Float64()*(1000-0))
-	if err != nil {
-		return err
-	}
-	err = a.storage.IncCounter(ctx, "PollCount", 1)
-	if err != nil {
-		return err
-	}
 
+	metrics := make([]metric.Metric, 0)
+	metrics = append(metrics, metric.Metric{Name: "Alloc", Type: metric.GaugeMetricType, Value: float64(stats.Alloc)})
+	metrics = append(metrics, metric.Metric{Name: "BuckHashSys", Type: metric.GaugeMetricType, Value: float64(stats.BuckHashSys)})
+	metrics = append(metrics, metric.Metric{Name: "Frees", Type: metric.GaugeMetricType, Value: float64(stats.Frees)})
+	metrics = append(metrics, metric.Metric{Name: "GCCPUFraction", Type: metric.GaugeMetricType, Value: stats.GCCPUFraction})
+	metrics = append(metrics, metric.Metric{Name: "GCSys", Type: metric.GaugeMetricType, Value: float64(stats.GCSys)})
+	metrics = append(metrics, metric.Metric{Name: "HeapAlloc", Type: metric.GaugeMetricType, Value: float64(stats.HeapAlloc)})
+	metrics = append(metrics, metric.Metric{Name: "HeapIdle", Type: metric.GaugeMetricType, Value: float64(stats.HeapIdle)})
+	metrics = append(metrics, metric.Metric{Name: "HeapInuse", Type: metric.GaugeMetricType, Value: float64(stats.HeapInuse)})
+	metrics = append(metrics, metric.Metric{Name: "HeapObjects", Type: metric.GaugeMetricType, Value: float64(stats.HeapObjects)})
+	metrics = append(metrics, metric.Metric{Name: "HeapReleased", Type: metric.GaugeMetricType, Value: float64(stats.HeapReleased)})
+	metrics = append(metrics, metric.Metric{Name: "HeapSys", Type: metric.GaugeMetricType, Value: float64(stats.HeapSys)})
+	metrics = append(metrics, metric.Metric{Name: "LastGC", Type: metric.GaugeMetricType, Value: float64(stats.LastGC)})
+	metrics = append(metrics, metric.Metric{Name: "Lookups", Type: metric.GaugeMetricType, Value: float64(stats.Lookups)})
+	metrics = append(metrics, metric.Metric{Name: "MCacheInuse", Type: metric.GaugeMetricType, Value: float64(stats.MCacheInuse)})
+	metrics = append(metrics, metric.Metric{Name: "MCacheSys", Type: metric.GaugeMetricType, Value: float64(stats.MCacheSys)})
+	metrics = append(metrics, metric.Metric{Name: "MSpanInuse", Type: metric.GaugeMetricType, Value: float64(stats.MSpanInuse)})
+	metrics = append(metrics, metric.Metric{Name: "MSpanSys", Type: metric.GaugeMetricType, Value: float64(stats.MSpanSys)})
+	metrics = append(metrics, metric.Metric{Name: "Mallocs", Type: metric.GaugeMetricType, Value: float64(stats.Mallocs)})
+	metrics = append(metrics, metric.Metric{Name: "NextGC", Type: metric.GaugeMetricType, Value: float64(stats.NextGC)})
+	metrics = append(metrics, metric.Metric{Name: "NumForcedGC", Type: metric.GaugeMetricType, Value: float64(stats.NumForcedGC)})
+	metrics = append(metrics, metric.Metric{Name: "NumGC", Type: metric.GaugeMetricType, Value: float64(stats.NumGC)})
+	metrics = append(metrics, metric.Metric{Name: "OtherSys", Type: metric.GaugeMetricType, Value: float64(stats.OtherSys)})
+	metrics = append(metrics, metric.Metric{Name: "PauseTotalNs", Type: metric.GaugeMetricType, Value: float64(stats.PauseTotalNs)})
+	metrics = append(metrics, metric.Metric{Name: "StackInuse", Type: metric.GaugeMetricType, Value: float64(stats.StackInuse)})
+	metrics = append(metrics, metric.Metric{Name: "StackSys", Type: metric.GaugeMetricType, Value: float64(stats.StackSys)})
+	metrics = append(metrics, metric.Metric{Name: "Sys", Type: metric.GaugeMetricType, Value: float64(stats.Sys)})
+	metrics = append(metrics, metric.Metric{Name: "TotalAlloc", Type: metric.GaugeMetricType, Value: float64(stats.TotalAlloc)})
+	metrics = append(metrics, metric.Metric{Name: "RandomValue", Type: metric.GaugeMetricType, Value: generateRandomValue()})
+	metrics = append(metrics, metric.Metric{Name: "RandomValue", Type: metric.CounterMetricType, Value: 1})
+
+	err := a.storage.SetAll(ctx, metrics)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 func (a *Agent) capturePsutil(ctx context.Context) error {
+
+	metrics := make([]metric.Metric, 0)
+
 	stats, err := mem.VirtualMemory()
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "TotalMemory", float64(stats.Total))
-	if err != nil {
-		return err
-	}
-	err = a.storage.SetFloat(ctx, "FreeMemory", float64(stats.Free))
 	if err != nil {
 		return err
 	}
 
 	percents, err := cpu.Percent(0, true)
-
 	if err != nil {
 		return err
 	}
+
+	metrics = append(metrics, metric.Metric{Name: "TotalMemory", Type: metric.GaugeMetricType, Value: float64(stats.Total)})
+	metrics = append(metrics, metric.Metric{Name: "FreeMemory", Type: metric.GaugeMetricType, Value: float64(stats.Free)})
 	for idx, percent := range percents {
 		name := "CPUutilization" + strconv.Itoa(idx+1)
-		err = a.storage.SetFloat(ctx, name, percent)
-		if err != nil {
-			return err
-		}
+		metrics = append(metrics, metric.Metric{Name: name, Type: metric.GaugeMetricType, Value: percent})
+	}
+
+	err = a.storage.SetAll(ctx, metrics)
+
+	if err != nil {
+		return err
 	}
 	return nil
 }

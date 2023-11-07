@@ -6,15 +6,19 @@ import (
 	"net/http"
 )
 
+type AgentClientParams struct {
+	Key string
+}
+
 type HTTPAgentClient struct {
 	client *http.Client
-	key    string
+	params AgentClientParams
 }
 
 func (c *HTTPAgentClient) Post(url string, contentType string, body []byte, compress bool) (*http.Response, error) {
 	var hash string
-	if len(c.key) != 0 {
-		hash = hasher.Encode(string(body), c.key)
+	if len(c.params.Key) != 0 {
+		hash = hasher.Encode(body, []byte(c.params.Key))
 	}
 	if compress {
 		var err error
@@ -32,12 +36,12 @@ func (c *HTTPAgentClient) Post(url string, contentType string, body []byte, comp
 		req.Header.Set("Content-Encoding", "gzip")
 		req.Header.Set("Accept-Encoding", "gzip")
 	}
-	if len(c.key) != 0 {
+	if len(c.params.Key) != 0 {
 		req.Header.Set("HashSHA256", hash)
 	}
 	return c.client.Do(req)
 }
 
-func NewHTTPAgentClient(key string) Client {
-	return &HTTPAgentClient{&http.Client{}, key}
+func NewHTTPAgentClient(params AgentClientParams) Client {
+	return &HTTPAgentClient{&http.Client{}, params}
 }

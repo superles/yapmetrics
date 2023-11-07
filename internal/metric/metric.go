@@ -80,8 +80,8 @@ func FromJSON(data *JSONData) (*Metric, error) {
 	return model, nil
 }
 
-func (m *Metric) ToJSON() (*JSONData, error) {
-	model := &JSONData{ID: m.Name}
+func (m *Metric) ToJSON() (JSONData, error) {
+	model := JSONData{ID: m.Name}
 	switch m.Type {
 	case GaugeMetricType:
 		model.MType = GaugeMetricTypeName

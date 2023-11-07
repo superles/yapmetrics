@@ -15,10 +15,7 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 	"time"
 )
 
@@ -32,7 +29,7 @@ type Agent struct {
 }
 
 func New(s metricProvider, cfg *config.Config) *Agent {
-	agent := &Agent{storage: s, config: cfg, client: client.NewHTTPAgentClient(cfg.SecretKey)}
+	agent := &Agent{storage: s, config: cfg, client: client.NewHTTPAgentClient(client.AgentClientParams{Key: cfg.SecretKey})}
 	return agent
 }
 
@@ -177,7 +174,7 @@ func (a *Agent) sendPlain(data *types.Metric) error {
 	if errVal != nil {
 		return errVal
 	}
-	url := "http://" + a.config.Endpoint + "/update/" + typeStr + "/" + data.Name + "/" + strVal + ""
+	url := fmt.Sprintf("http://%s/update/%s/%s/%s", a.config.Endpoint, typeStr, data.Name, strVal)
 	err := a.send(url, "text/plain", []byte(""))
 	return err
 }
@@ -188,7 +185,7 @@ func (a *Agent) sendJSON(data *types.Metric) error {
 		return err
 	}
 	rawBytes, _ := easyjson.Marshal(updatedJSON)
-	url := "http://" + a.config.Endpoint + "/update/"
+	url := fmt.Sprintf("http://%s/update/", a.config.Endpoint)
 	sendErr := a.sendWithRetry(url, "application/json", rawBytes)
 	return sendErr
 }
@@ -203,18 +200,13 @@ func (a *Agent) sendAllJSON(ctx context.Context) error {
 		return err
 	}
 
-	var col types.JSONDataCollection
-	for _, item := range metrics {
-		updatedJSON, err := item.ToJSON()
-		if err != nil {
-			return err
-		}
-		col = append(col, *updatedJSON)
+	rawBytes, err := compressMetrics(metrics)
+	if err != nil {
+		return err
 	}
-	rawBytes, _ := easyjson.Marshal(col)
-	url := "http://" + a.config.Endpoint + "/updates/"
-	sendErr := a.sendWithRetry(url, "application/json", rawBytes)
-	return sendErr
+	url := fmt.Sprintf("http://%s/updates/", a.config.Endpoint)
+	err = a.sendWithRetry(url, "application/json", rawBytes)
+	return err
 }
 
 func (a *Agent) sendAll() error {
@@ -241,69 +233,60 @@ func (a *Agent) sendAll() error {
 	return nil
 }
 
-func (a *Agent) poolTickRuntime(ctx context.Context) {
-	go func() {
-		ticker := time.NewTicker(time.Second * time.Duration(a.config.PollInterval))
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				logger.Log.Debug("captureRuntime")
-				err := a.captureRuntime(ctx)
-				if err != nil {
-					logger.Log.Error("captureRuntime error", err.Error())
-				}
+func (a *Agent) poolTickRuntime(ctx context.Context, pollInterval time.Duration) {
+	ticker := time.NewTicker(pollInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			logger.Log.Debug("captureRuntime")
+			err := a.captureRuntime(ctx)
+			if err != nil {
+				logger.Log.Error("captureRuntime error", err.Error())
 			}
 		}
-	}()
+	}
 }
 
-func (a *Agent) poolTickPsutil(ctx context.Context) {
-	go func() {
-		ticker := time.NewTicker(time.Second * time.Duration(a.config.PollInterval))
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				logger.Log.Debug("capturePsutil")
-				err := a.capturePsutil(ctx)
-				if err != nil {
-					logger.Log.Error("capturePsutil error", err.Error())
-				}
+func (a *Agent) poolTickPsutil(ctx context.Context, pollInterval time.Duration) {
+	ticker := time.NewTicker(pollInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			logger.Log.Debug("capturePsutil")
+			err := a.capturePsutil(ctx)
+			if err != nil {
+				logger.Log.Error("capturePsutil error", err.Error())
 			}
 		}
-	}()
+	}
 }
 
-func (a *Agent) sendTicker(ctx context.Context) {
-	go func() {
-		ticker := time.NewTicker(time.Second * time.Duration(a.config.ReportInterval))
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				logger.Log.Debug("agent run sendAllJSON")
-				err := a.sendAllJSON(ctx)
-				if err != nil {
-					logger.Log.Error("reportInterval error", err.Error())
-				}
+func (a *Agent) sendTicker(ctx context.Context, reportInterval time.Duration) {
+	ticker := time.NewTicker(reportInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			logger.Log.Debug("agent run sendAllJSON")
+			err := a.sendAllJSON(ctx)
+			if err != nil {
+				logger.Log.Error("reportInterval error", err.Error())
 			}
 		}
-	}()
+	}
 }
 
-func (a *Agent) Run(appCtx context.Context) error {
+func (a *Agent) Run(ctx context.Context) error {
 
 	logger.Log.Debug("agent run")
-
-	ctx, cancel := context.WithCancel(appCtx)
-	defer cancel()
 
 	err := a.captureRuntime(ctx)
 
@@ -317,21 +300,17 @@ func (a *Agent) Run(appCtx context.Context) error {
 		return err
 	}
 
-	a.poolTickRuntime(ctx)
-	a.poolTickPsutil(ctx)
+	reportInterval := time.Second * time.Duration(a.config.ReportInterval)
+	pollInterval := time.Second * time.Duration(a.config.PollInterval)
+
+	go a.poolTickRuntime(ctx, pollInterval)
+	go a.poolTickPsutil(ctx, pollInterval)
 
 	if a.config.RateLimit > 0 {
-		a.sendPoolTicker(ctx)
+		a.sendPoolTicker(ctx, reportInterval)
 	} else {
-		a.sendTicker(ctx)
+		go a.sendTicker(ctx, reportInterval)
 	}
-
-	done := make(chan os.Signal, 1)
-	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-	logger.Log.Info("Agent Started")
-	<-done
-	logger.Log.Info("Agent Stopped")
-	logger.Log.Info("Agent Exited Properly")
 
 	return nil
 }

@@ -49,7 +49,7 @@ func WithAuth(key string) func(h http.Handler) http.Handler {
 			}
 			inHash := r.Header.Get("HashSHA256")
 			if len(inHash) != 0 {
-				expectedHash := hasher.Encode(bodyStr, key)
+				expectedHash := hasher.Encode([]byte(bodyStr), []byte(key))
 				if len(inHash) == 0 {
 					logger.Log.Error("пустой хеш в запросе")
 					http.Error(w, "", http.StatusBadRequest)
@@ -61,7 +61,7 @@ func WithAuth(key string) func(h http.Handler) http.Handler {
 				}
 			}
 			h.ServeHTTP(&wrapper, r)
-			outHash := hasher.Encode(wrapper.buf.String(), key)
+			outHash := hasher.Encode(wrapper.buf.Bytes(), []byte(key))
 			w.Header().Set("HashSHA256", outHash)
 			for hKey, hVal := range wrapper.header {
 				val := hVal[0]
