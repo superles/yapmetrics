@@ -24,6 +24,8 @@ type Metric struct {
 	Value float64 //Значение метрики
 }
 
+type Collection map[string]Metric
+
 func (m *Metric) String() (string, error) {
 	switch m.Type {
 	case GaugeMetricType:
@@ -78,8 +80,8 @@ func FromJSON(data *JSONData) (*Metric, error) {
 	return model, nil
 }
 
-func (m *Metric) ToJSON() (*JSONData, error) {
-	model := &JSONData{ID: m.Name}
+func (m *Metric) ToJSON() (JSONData, error) {
+	model := JSONData{ID: m.Name}
 	switch m.Type {
 	case GaugeMetricType:
 		model.MType = GaugeMetricTypeName

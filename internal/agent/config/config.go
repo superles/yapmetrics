@@ -7,6 +7,8 @@ type Config struct {
 	ReportInterval int    `env:"REPORT_INTERVAL"`
 	PollInterval   int    `env:"POLL_INTERVAL"`
 	LogLevel       string `env:"AGENT_LOG_LEVEL"`
+	SecretKey      string `env:"KEY"`
+	RateLimit      uint   `env:"RATE_LIMIT"`
 }
 
 var (
@@ -45,6 +47,18 @@ func New() *Config {
 			instance.LogLevel = envConfig.LogLevel
 		} else {
 			instance.LogLevel = flagConfig.LogLevel
+		}
+
+		if len(envConfig.SecretKey) > 0 {
+			instance.SecretKey = envConfig.SecretKey
+		} else {
+			instance.SecretKey = flagConfig.SecretKey
+		}
+
+		if envConfig.RateLimit > 0 {
+			instance.RateLimit = envConfig.RateLimit
+		} else {
+			instance.RateLimit = flagConfig.RateLimit
 		}
 	})
 

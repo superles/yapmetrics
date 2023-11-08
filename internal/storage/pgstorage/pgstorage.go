@@ -96,7 +96,7 @@ func (s *PgStorage) Get(ctx context.Context, name string) (types.Metric, error) 
 	return item, nil
 }
 
-func (s *PgStorage) Set(ctx context.Context, data *types.Metric) error {
+func (s *PgStorage) Set(ctx context.Context, data types.Metric) error {
 
 	_, err := s.db.Exec(ctx, "update "+pgx.Identifier{tableName}.Sanitize()+" set value=$1, type=$2; where id = $3", data.Value, data.Type, data.Name)
 

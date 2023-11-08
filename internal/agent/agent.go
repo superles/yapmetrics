@@ -13,19 +13,11 @@ import (
 	"github.com/superles/yapmetrics/internal/utils/logger"
 	"go.uber.org/zap"
 	"io"
-	"math/rand"
 	"net"
 	"net/http"
-	"runtime"
 	"strings"
 	"time"
 )
-
-type metricProvider interface {
-	GetAll(ctx context.Context) (map[string]types.Metric, error)
-	SetFloat(ctx context.Context, Name string, Value float64) error
-	IncCounter(ctx context.Context, Name string, Value int64) error
-}
 
 const attempts = 4
 
@@ -37,7 +29,7 @@ type Agent struct {
 }
 
 func New(s metricProvider, cfg *config.Config) *Agent {
-	agent := &Agent{storage: s, config: cfg, client: client.NewHTTPAgentClient()}
+	agent := &Agent{storage: s, config: cfg, client: client.NewHTTPAgentClient(client.AgentClientParams{Key: cfg.SecretKey})}
 	return agent
 }
 
@@ -176,82 +168,13 @@ func (a *Agent) send(url string, contentType string, body []byte) error {
 	return fmt.Errorf("сервер вернул неожиданный код ответа %d", response.StatusCode)
 }
 
-func (a *Agent) capture() {
-	var stats runtime.MemStats
-	runtime.ReadMemStats(&stats)
-	ctx := context.Background()
-	checkError := func(err error) {
-		if err != nil {
-			logger.Log.Error(err)
-		}
-	}
-	err := a.storage.SetFloat(ctx, "Alloc", float64(stats.Alloc))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "BuckHashSys", float64(stats.BuckHashSys))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "Frees", float64(stats.Frees))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "GCCPUFraction", stats.GCCPUFraction)
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "GCSys", float64(stats.GCSys))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "HeapAlloc", float64(stats.HeapAlloc))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "HeapIdle", float64(stats.HeapIdle))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "HeapInuse", float64(stats.HeapInuse))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "HeapObjects", float64(stats.HeapObjects))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "HeapReleased", float64(stats.HeapReleased))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "HeapSys", float64(stats.HeapSys))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "LastGC", float64(stats.LastGC))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "Lookups", float64(stats.Lookups))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "MCacheInuse", float64(stats.MCacheInuse))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "MCacheSys", float64(stats.MCacheSys))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "MSpanInuse", float64(stats.MSpanInuse))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "MSpanSys", float64(stats.MSpanSys))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "Mallocs", float64(stats.Mallocs))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "NextGC", float64(stats.NextGC))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "NumForcedGC", float64(stats.NumForcedGC))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "NumGC", float64(stats.NumGC))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "OtherSys", float64(stats.OtherSys))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "PauseTotalNs", float64(stats.PauseTotalNs))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "StackInuse", float64(stats.StackInuse))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "StackSys", float64(stats.StackSys))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "Sys", float64(stats.Sys))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "TotalAlloc", float64(stats.TotalAlloc))
-	checkError(err)
-	err = a.storage.SetFloat(ctx, "RandomValue", 1000+rand.Float64()*(1000-0))
-	checkError(err)
-	err = a.storage.IncCounter(ctx, "PollCount", 1)
-	checkError(err)
-}
-
 func (a *Agent) sendPlain(data *types.Metric) error {
 	typeStr, _ := types.TypeToString(data.Type)
 	strVal, errVal := data.String()
 	if errVal != nil {
 		return errVal
 	}
-	url := "http://" + a.config.Endpoint + "/update/" + typeStr + "/" + data.Name + "/" + strVal + ""
+	url := fmt.Sprintf("http://%s/update/%s/%s/%s", a.config.Endpoint, typeStr, data.Name, strVal)
 	err := a.send(url, "text/plain", []byte(""))
 	return err
 }
@@ -262,33 +185,28 @@ func (a *Agent) sendJSON(data *types.Metric) error {
 		return err
 	}
 	rawBytes, _ := easyjson.Marshal(updatedJSON)
-	url := "http://" + a.config.Endpoint + "/update/"
+	url := fmt.Sprintf("http://%s/update/", a.config.Endpoint)
 	sendErr := a.sendWithRetry(url, "application/json", rawBytes)
 	return sendErr
 }
 
-func (a *Agent) sendAllJSON() error {
+func (a *Agent) sendAllJSON(ctx context.Context) error {
 
 	logger.Log.Debug("sendAllJSON")
 
-	metrics, err := a.storage.GetAll(context.Background())
+	metrics, err := a.storage.GetAll(ctx)
 
 	if err != nil {
 		return err
 	}
 
-	var col types.JSONDataCollection
-	for _, item := range metrics {
-		updatedJSON, err := item.ToJSON()
-		if err != nil {
-			return err
-		}
-		col = append(col, *updatedJSON)
+	rawBytes, err := compressMetrics(metrics)
+	if err != nil {
+		return err
 	}
-	rawBytes, _ := easyjson.Marshal(col)
-	url := "http://" + a.config.Endpoint + "/updates/"
-	sendErr := a.sendWithRetry(url, "application/json", rawBytes)
-	return sendErr
+	url := fmt.Sprintf("http://%s/updates/", a.config.Endpoint)
+	err = a.sendWithRetry(url, "application/json", rawBytes)
+	return err
 }
 
 func (a *Agent) sendAll() error {
@@ -315,23 +233,72 @@ func (a *Agent) sendAll() error {
 	return nil
 }
 
-func (a *Agent) poolTick() {
-	for range time.Tick(time.Duration(a.config.PollInterval) * time.Second) {
-		logger.Log.Debug("capture")
-		a.capture()
+func (a *Agent) poolTickRuntime(ctx context.Context, pollInterval time.Duration) {
+	ticker := time.NewTicker(pollInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			logger.Log.Debug("captureRuntime")
+			err := a.captureRuntime(ctx)
+			if err != nil {
+				logger.Log.Error("captureRuntime error", err.Error())
+			}
+		}
 	}
 }
 
-func (a *Agent) Run() {
+func (a *Agent) poolTickPsutil(ctx context.Context, pollInterval time.Duration) {
+	ticker := time.NewTicker(pollInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			logger.Log.Debug("capturePsutil")
+			err := a.capturePsutil(ctx)
+			if err != nil {
+				logger.Log.Error("capturePsutil error", err.Error())
+			}
+		}
+	}
+}
+
+func (a *Agent) sendTicker(ctx context.Context, reportInterval time.Duration) {
+	ticker := time.NewTicker(reportInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			logger.Log.Debug("agent run sendAllJSON")
+			err := a.sendAllJSON(ctx)
+			if err != nil {
+				logger.Log.Error("reportInterval error", err.Error())
+			}
+		}
+	}
+}
+
+func (a *Agent) Run(ctx context.Context) error {
 
 	logger.Log.Debug("agent run")
 
-	a.capture()
+	reportInterval := time.Second * time.Duration(a.config.ReportInterval)
+	pollInterval := time.Second * time.Duration(a.config.PollInterval)
 
-	go a.poolTick()
+	go a.poolTickRuntime(ctx, pollInterval)
+	go a.poolTickPsutil(ctx, pollInterval)
 
-	for range time.Tick(time.Second * time.Duration(a.config.ReportInterval)) {
-		logger.Log.Debug("agent run sendAllJSON")
-		a.sendAllJSON()
+	if a.config.RateLimit > 0 {
+		a.sendPoolTicker(ctx, reportInterval)
+	} else {
+		go a.sendTicker(ctx, reportInterval)
 	}
+
+	return nil
 }
