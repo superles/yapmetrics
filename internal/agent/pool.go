@@ -48,11 +48,10 @@ func (a *Agent) dispatcher(ctx context.Context, input <-chan types.Collection, o
 				return
 			}
 
-			if len(out) >= int(a.config.RateLimit) {
-				continue
+			select {
+			case out <- metrics:
+			default:
 			}
-
-			out <- metrics
 		}
 	}
 }
@@ -93,8 +92,8 @@ func (a *Agent) sendPoolTicker(ctx context.Context, reportInterval time.Duration
 	resultChan := make(chan response, a.config.RateLimit)
 	for i := 1; i <= int(a.config.RateLimit); i++ {
 		go func(workerID int) {
+			defer wg.Done()
 			a.worker(workerID, ctx, dispatcherChan, resultChan)
-			wg.Done()
 		}(i)
 	}
 	wg.Add(int(a.config.RateLimit))
