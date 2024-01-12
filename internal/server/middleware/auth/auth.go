@@ -25,6 +25,7 @@ func (w *rwWrapper) WriteHeader(status int) {
 func (w *rwWrapper) Header() http.Header {
 	return w.header
 }
+
 func WithAuth(key string) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		logFn := func(w http.ResponseWriter, r *http.Request) {

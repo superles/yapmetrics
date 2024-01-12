@@ -28,6 +28,7 @@ type Agent struct {
 	logger  *zap.SugaredLogger
 }
 
+// New Создание нового агента.
 func New(s metricProvider, cfg *config.Config) *Agent {
 	agent := &Agent{storage: s, config: cfg, client: client.NewHTTPAgentClient(client.AgentClientParams{Key: cfg.SecretKey})}
 	return agent
@@ -161,11 +162,11 @@ func (a *Agent) send(url string, contentType string, body []byte) error {
 		zap.Error(err),
 	)
 
-	if response.StatusCode == http.StatusOK {
-		return nil
+	if response.StatusCode != http.StatusOK {
+		return fmt.Errorf("сервер вернул неожиданный код ответа %d", response.StatusCode)
 	}
 
-	return fmt.Errorf("сервер вернул неожиданный код ответа %d", response.StatusCode)
+	return nil
 }
 
 func (a *Agent) sendPlain(data *types.Metric) error {

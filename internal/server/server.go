@@ -85,7 +85,10 @@ func (s *Server) startDumpWatcher(ctx context.Context) {
 	}
 }
 
-func (s *Server) Run(ctx context.Context) error {
+func (s *Server) Run(appContext context.Context) error {
+
+	ctx, done := signal.NotifyContext(appContext, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	defer done()
 
 	if s.config.Restore && s.config.DatabaseDsn == "" {
 		if err := s.load(ctx); err != nil {
@@ -95,9 +98,6 @@ func (s *Server) Run(ctx context.Context) error {
 			logger.Log.Debug("бд загружена успешно")
 		}
 	}
-
-	done := make(chan os.Signal, 1)
-	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 	srv := &http.Server{
 		Addr:    s.config.Endpoint,
@@ -113,7 +113,7 @@ func (s *Server) Run(ctx context.Context) error {
 	s.startDumpWatcher(ctx)
 
 	logger.Log.Info("Server Started")
-	<-done
+	<-ctx.Done()
 	logger.Log.Info("Server Stopped")
 
 	if err := srv.Shutdown(ctx); err != nil {

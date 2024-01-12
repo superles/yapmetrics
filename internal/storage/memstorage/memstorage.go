@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	types "github.com/superles/yapmetrics/internal/metric"
+	"github.com/superles/yapmetrics/internal/metric"
 	"github.com/superles/yapmetrics/internal/utils/logger"
 	"io"
 	"os"
@@ -14,17 +14,17 @@ import (
 var storageSync = sync.RWMutex{}
 
 type MemStorage struct {
-	collection map[string]types.Metric
+	collection map[string]metric.Metric
 }
 
 func New() *MemStorage {
-	return &MemStorage{make(map[string]types.Metric)}
+	return &MemStorage{make(map[string]metric.Metric)}
 }
 
-func (s *MemStorage) GetAll(ctx context.Context) (map[string]types.Metric, error) {
+func (s *MemStorage) GetAll(ctx context.Context) (map[string]metric.Metric, error) {
 	storageSync.RLock()
 	defer storageSync.RUnlock()
-	targetMap := make(map[string]types.Metric, len(s.collection))
+	targetMap := make(map[string]metric.Metric, len(s.collection))
 
 	// Copy from the original map to the target map
 	for key, value := range s.collection {
@@ -34,32 +34,32 @@ func (s *MemStorage) GetAll(ctx context.Context) (map[string]types.Metric, error
 	return targetMap, nil
 }
 
-func (s *MemStorage) Get(ctx context.Context, name string) (types.Metric, error) {
+func (s *MemStorage) Get(ctx context.Context, name string) (metric.Metric, error) {
 	storageSync.RLock()
 	defer storageSync.RUnlock()
 	val, ok := s.collection[name]
 	if !ok {
-		return types.Metric{}, errors.New("метрика не найдена")
+		return metric.Metric{}, errors.New("метрика не найдена")
 	}
 	return val, nil
 }
 
-func (s *MemStorage) Set(ctx context.Context, data types.Metric) error {
+func (s *MemStorage) Set(ctx context.Context, data metric.Metric) error {
 	storageSync.Lock()
 	defer storageSync.Unlock()
 	s.collection[data.Name] = data
 	return nil
 }
 
-func (s *MemStorage) SetAll(ctx context.Context, data []types.Metric) error {
+func (s *MemStorage) SetAll(ctx context.Context, data []metric.Metric) error {
 	for _, value := range data {
 		logger.Log.Debug("SetAll", value)
 		switch value.Type {
-		case types.GaugeMetricType:
+		case metric.GaugeMetricType:
 			if err := s.SetFloat(ctx, value.Name, value.Value); err != nil {
 				return err
 			}
-		case types.CounterMetricType:
+		case metric.CounterMetricType:
 			if err := s.IncCounter(ctx, value.Name, int64(value.Value)); err != nil {
 				return err
 			}
@@ -71,7 +71,7 @@ func (s *MemStorage) SetAll(ctx context.Context, data []types.Metric) error {
 func (s *MemStorage) SetFloat(ctx context.Context, Name string, Value float64) error {
 	storageSync.Lock()
 	defer storageSync.Unlock()
-	s.collection[Name] = types.Metric{Name: Name, Type: types.GaugeMetricType, Value: Value}
+	s.collection[Name] = metric.Metric{Name: Name, Type: metric.GaugeMetricType, Value: Value}
 	return nil
 }
 
@@ -80,7 +80,7 @@ func (s *MemStorage) IncCounter(ctx context.Context, Name string, Value int64) e
 	defer storageSync.Unlock()
 	val := s.collection[Name]
 	val.Name = Name
-	val.Type = types.CounterMetricType
+	val.Type = metric.CounterMetricType
 	val.Value = val.Value + float64(Value)
 	s.collection[Name] = val
 	return nil
@@ -103,8 +103,8 @@ func (s *MemStorage) Dump(ctx context.Context, path string) error {
 	if err != nil {
 		return err
 	}
-	for _, metric := range metrics {
-		err := encoder.Encode(&metric)
+	for _, item := range metrics {
+		err := encoder.Encode(&item)
 		if err != nil {
 			return fileErr
 		}
@@ -123,7 +123,7 @@ func (s *MemStorage) Restore(ctx context.Context, path string) error {
 	}
 	dec := json.NewDecoder(file)
 	for {
-		var m types.Metric
+		var m metric.Metric
 		if err := dec.Decode(&m); err == io.EOF {
 			break
 		} else if err != nil {
