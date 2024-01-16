@@ -9,6 +9,7 @@ type Config struct {
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	Restore         bool   `env:"RESTORE"`
 	DatabaseDsn     string `env:"DATABASE_DSN"`
+	SecretKey       string `env:"KEY"`
 }
 
 var (
@@ -59,6 +60,12 @@ func New() *Config {
 			instance.DatabaseDsn = envConfig.DatabaseDsn
 		} else {
 			instance.DatabaseDsn = flagConfig.DatabaseDsn
+		}
+
+		if len(envConfig.SecretKey) > 0 {
+			instance.SecretKey = envConfig.SecretKey
+		} else {
+			instance.SecretKey = flagConfig.SecretKey
 		}
 	})
 

@@ -13,6 +13,8 @@ func parseFlags() Config {
 	flag.IntVar(&config.ReportInterval, "r", 10, "частота отправки метрик на сервер")
 	flag.IntVar(&config.PollInterval, "p", 2, "частота опроса метрик из пакета runtime")
 	flag.StringVar(&config.LogLevel, "v", "info", "уровень логирования")
+	flag.StringVar(&config.SecretKey, "k", "", "Секретный ключ для хеширования ответов и проверки запросов")
+	flag.UintVar(&config.RateLimit, "l", 0, "Количество одновременно исходящих запросов на сервер")
 
 	var Usage = func() {
 		_, err := fmt.Fprintf(flag.CommandLine.Output(), "Параметры командной строки агента:\n")

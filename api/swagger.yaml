@@ -1,0 +1,143 @@
+basePath: /
+definitions:
+  metric.JSONData:
+    properties:
+      delta:
+        description: значение метрики в случае передачи counter
+        type: integer
+      id:
+        description: имя метрики
+        type: string
+      type:
+        description: параметр, принимающий значение gauge или counter
+        type: string
+      value:
+        description: значение метрики в случае передачи gauge
+        type: number
+    type: object
+externalDocs:
+  description: OpenAPI
+  url: https://swagger.io/resources/open-api/
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: Yandex Practicum metrics server.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Swagger Server API
+  version: "1.0"
+paths:
+  /:
+    get:
+      description: Вывод html таблицы с списком метрик
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+  /update/:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: обновленная метрика
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/metric.JSONData'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/metric.JSONData'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+  /updates/:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: обновленная метрика
+        in: body
+        name: body
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/metric.JSONData'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/metric.JSONData'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+  /value/:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: обновленная метрика
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/metric.JSONData'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/metric.JSONData'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+  /value/{type}/{name}:
+    get:
+      parameters:
+      - description: Название метрики
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: Тип метрики
+        in: path
+        name: type
+        required: true
+        type: string
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+swagger: "2.0"

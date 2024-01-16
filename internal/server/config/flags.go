@@ -18,6 +18,7 @@ func parseFlags() Config {
 	flag.BoolVar(&config.Restore, "r", true, "интервал сохранения метрик на диск")
 	//example: postgresql://test_user:test_user@localhost/test_db
 	flag.StringVar(&config.DatabaseDsn, "d", "", "строка подключения к базе данных в формате dsn")
+	flag.StringVar(&config.SecretKey, "k", "", "Секретный ключ для хеширования ответов и проверки запросов")
 
 	var Usage = func() {
 		_, err := fmt.Fprintf(flag.CommandLine.Output(), "Параметры командной строки сервера:\n")
