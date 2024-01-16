@@ -17,6 +17,7 @@ type PgStorage struct {
 	db *pgxpool.Pool
 }
 
+// New Создание объекта PgStorage
 func New(dsn string) (*PgStorage, error) {
 
 	dbConfig, dbErr := pgxpool.ParseConfig(dsn)

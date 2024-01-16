@@ -13,9 +13,6 @@ import (
 func randFloat(min, max float64) float64 {
 	return min + rand.Float64()*(max-min)
 }
-func generateRandomValue() float64 {
-	return randFloat(0, 1000)
-}
 
 func (a *Agent) captureRuntime(ctx context.Context) error {
 	var stats runtime.MemStats
@@ -49,7 +46,7 @@ func (a *Agent) captureRuntime(ctx context.Context) error {
 		{Name: "StackSys", Type: metric.GaugeMetricType, Value: float64(stats.StackSys)},
 		{Name: "Sys", Type: metric.GaugeMetricType, Value: float64(stats.Sys)},
 		{Name: "TotalAlloc", Type: metric.GaugeMetricType, Value: float64(stats.TotalAlloc)},
-		{Name: "RandomValue", Type: metric.GaugeMetricType, Value: generateRandomValue()},
+		{Name: "RandomValue", Type: metric.GaugeMetricType, Value: randFloat(0, 1000)},
 		{Name: "PollCount", Type: metric.CounterMetricType, Value: 1},
 	}
 

@@ -134,7 +134,7 @@ func (s *Server) UpdateGauge(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Update Обновление метрики
+// Update Обновление метрики.
 // @Accept json
 // @Produce json
 // @Param body body metric.JSONData true "обновленная метрика"
@@ -204,6 +204,13 @@ func (s *Server) Update(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// Updates Обновление метрик.
+// @Accept json
+// @Produce json
+// @Param body body []metric.JSONData true "обновленная метрика"
+// @Success 200 {object} []metric.JSONData
+// @Success 400 {string} string
+// @Router /updates/ [post]
 func (s *Server) Updates(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
@@ -286,7 +293,7 @@ func (s *Server) GetPing(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// GetValue Получение значения метрики
+// GetValue Получение значения метрики в виде строки.
 // @Produce plain
 // @Param name   path string true "Название метрики"
 // @Param type path string true "Тип метрики"
@@ -335,6 +342,13 @@ func (s *Server) GetValue(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// GetJSONValue Получение значения метрики в виде JSON.
+// @Accept json
+// @Produce json
+// @Param body body metric.JSONData true "обновленная метрика"
+// @Success 200 {object} metric.JSONData
+// @Success 400 {string} string
+// @Router /value/ [post]
 func (s *Server) GetJSONValue(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")

@@ -16,6 +16,7 @@ var (
 	instance Config
 )
 
+// New Создание объекта Config, pattern: Singleton
 func New() *Config {
 
 	once.Do(func() {

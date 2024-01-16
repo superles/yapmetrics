@@ -85,6 +85,7 @@ func (s *Server) startDumpWatcher(ctx context.Context) {
 	}
 }
 
+// Run Запуск сервера.
 func (s *Server) Run(appContext context.Context) error {
 
 	ctx, done := signal.NotifyContext(appContext, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)

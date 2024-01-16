@@ -5,6 +5,7 @@ import (
 	types "github.com/superles/yapmetrics/internal/metric"
 )
 
+// compressMetrics преобразование коллекции метрик в JSON.
 func compressMetrics(metrics types.Collection) ([]byte, error) {
 	var col types.JSONDataCollection
 	for _, item := range metrics {

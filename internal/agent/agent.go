@@ -285,6 +285,7 @@ func (a *Agent) sendTicker(ctx context.Context, reportInterval time.Duration) {
 	}
 }
 
+// Run Запуск агента.
 func (a *Agent) Run(ctx context.Context) error {
 
 	logger.Log.Debug("agent run")
