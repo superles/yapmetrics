@@ -2,14 +2,15 @@ package main
 
 import (
 	"context"
-	"github.com/superles/yapmetrics/internal/agent"
-	"github.com/superles/yapmetrics/internal/agent/config"
-	"github.com/superles/yapmetrics/internal/storage/memstorage"
-	"github.com/superles/yapmetrics/internal/utils/logger"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/superles/yapmetrics/internal/agent"
+	"github.com/superles/yapmetrics/internal/agent/config"
+	"github.com/superles/yapmetrics/internal/storage/memstorage"
+	"github.com/superles/yapmetrics/internal/utils/logger"
 )
 
 func main() {
@@ -30,5 +31,4 @@ func main() {
 	<-appContext.Done()
 	logger.Log.Info("Agent Stopped")
 	logger.Log.Info("Agent Exited Properly")
-
 }

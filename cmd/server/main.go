@@ -27,6 +27,9 @@ import (
 	"github.com/superles/yapmetrics/internal/storage/pgstorage"
 	"github.com/superles/yapmetrics/internal/utils/logger"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
@@ -44,7 +47,8 @@ func main() {
 		log.Fatal("ошибка инициализации логера", err.Error())
 	}
 	srv := server.New(store, cfg)
-	appContext := context.Background()
+	appContext, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 	if err = srv.Run(appContext); err != nil {
 		log.Fatal("ошибка запуска сервера", err.Error())
 	}
