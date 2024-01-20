@@ -20,6 +20,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/superles/yapmetrics/internal/server"
 	"github.com/superles/yapmetrics/internal/server/config"
 	"github.com/superles/yapmetrics/internal/storage"
@@ -32,7 +33,20 @@ import (
 	"syscall"
 )
 
+var (
+	buildVersion = "N/A"
+	buildDate    = "N/A"
+	buildCommit  = "N/A"
+)
+
+func printInfo() {
+	fmt.Printf("Build version: %s\n", buildVersion)
+	fmt.Printf("Build date: %s\n", buildDate)
+	fmt.Printf("Build commit: %s\n", buildCommit)
+}
+
 func main() {
+	printInfo()
 	cfg := config.New()
 	var store storage.Storage
 	var err error

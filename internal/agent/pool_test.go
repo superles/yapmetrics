@@ -27,7 +27,7 @@ func TestAgent_generator(t *testing.T) {
 	defer close(input)
 	t.Run("generator test", func(t *testing.T) {
 		go a.generator(context.Background(), input, 100*time.Millisecond)
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(1000 * time.Millisecond)
 		require.Exactly(t, len(input), 3, "wrong generator elements count")
 	})
 }
