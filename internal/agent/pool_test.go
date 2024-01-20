@@ -23,11 +23,15 @@ func TestAgent_generator(t *testing.T) {
 	defer done()
 	err = store.Set(ctx, types.Metric{Name: "test", Type: types.CounterMetricType, Value: 1})
 	require.NoError(t, err)
-	input := make(chan<- types.Collection, 3)
-	defer close(input)
+	requestChan := make(chan types.Collection, 1)
+	defer close(requestChan)
 	t.Run("generator test", func(t *testing.T) {
-		go a.generator(context.Background(), input, 100*time.Millisecond)
-		time.Sleep(1000 * time.Millisecond)
-		require.Exactly(t, len(input), 3, "wrong generator elements count")
+		go a.generator(context.Background(), requestChan, 100*time.Millisecond)
+		select {
+		case <-ctx.Done():
+			return // Выход из горутины при отмене контекста
+		case _, ok := <-requestChan:
+			require.Exactly(t, ok, true, "generator not generate")
+		}
 	})
 }

@@ -78,7 +78,7 @@ func TestMemStorage(t *testing.T) {
 
 	t.Run("SetFloat and Get", func(t *testing.T) {
 
-		testMetric := types.Metric{Name: "test_metric_set_float", Type: types.GaugeMetricType, Value: 42.0}
+		testMetric := types.Metric{Name: "test_metric_set_float"}
 
 		err := memStorage.SetFloat(context.Background(), testMetric.Name, 50.0)
 		if err != nil {
@@ -125,7 +125,9 @@ func TestMemStorage(t *testing.T) {
 
 		testMetric := types.Metric{Name: "test_metric_dump", Type: types.GaugeMetricType, Value: 42.0}
 		err := memStorage.Set(context.Background(), testMetric)
-
+		if err != nil {
+			t.Fatalf("Error set metrics: %v", err)
+		}
 		// Dump metrics to a file
 		err = memStorage.Dump(context.Background(), tmpfile.Name())
 
