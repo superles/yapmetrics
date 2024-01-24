@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/salihzain/tagalyzer"
-	"github.com/superles/yapmetrics/internal/exitcheck"
+	"github.com/superles/yapmetrics/pkg/exitcheck"
 	"github.com/timakin/bodyclose/passes/bodyclose"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/multichecker"
