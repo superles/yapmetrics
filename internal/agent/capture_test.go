@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"github.com/stretchr/testify/require"
+	"github.com/superles/yapmetrics/internal/agent/client"
 	"github.com/superles/yapmetrics/internal/agent/config"
 	"github.com/superles/yapmetrics/internal/storage/memstorage"
 	"github.com/superles/yapmetrics/internal/utils/logger"
@@ -11,7 +12,9 @@ import (
 
 func Benchmark_captureRuntime(b *testing.B) {
 
-	agent := New(memstorage.New(), config.New())
+	cfg := config.New()
+	agent := New(memstorage.New(), config.New(), client.NewHTTPAgentClient(client.AgentClientParams{Key: cfg.SecretKey}), nil)
+
 	ctx := context.Background()
 
 	b.ResetTimer()
@@ -25,7 +28,9 @@ func Benchmark_captureRuntime(b *testing.B) {
 
 func Benchmark_capturePsutil(b *testing.B) {
 
-	agent := New(memstorage.New(), config.New())
+	cfg := config.New()
+	agent := New(memstorage.New(), config.New(), client.NewHTTPAgentClient(client.AgentClientParams{Key: cfg.SecretKey}), nil)
+
 	ctx := context.Background()
 
 	b.ResetTimer()
@@ -44,7 +49,7 @@ func TestAgent_captureRuntime(t *testing.T) {
 		err := logger.Initialize(cfg.LogLevel)
 		require.NoError(t, err)
 
-		a := New(storage, cfg)
+		a := New(storage, config.New(), client.NewHTTPAgentClient(client.AgentClientParams{Key: cfg.SecretKey}), nil)
 
 		err = a.captureRuntime(context.Background())
 		require.NoError(t, err)
@@ -58,7 +63,7 @@ func TestAgent_capturePsutil(t *testing.T) {
 		err := logger.Initialize(cfg.LogLevel)
 		require.NoError(t, err)
 
-		a := New(storage, cfg)
+		a := New(storage, config.New(), client.NewHTTPAgentClient(client.AgentClientParams{Key: cfg.SecretKey}), nil)
 
 		err = a.capturePsutil(context.Background())
 		require.NoError(t, err)

@@ -14,7 +14,10 @@ func parseFlags() Config {
 	flag.IntVar(&config.PollInterval, "p", 2, "частота опроса метрик из пакета runtime")
 	flag.StringVar(&config.LogLevel, "v", "info", "уровень логирования")
 	flag.StringVar(&config.SecretKey, "k", "", "Секретный ключ для хеширования ответов и проверки запросов")
+	flag.StringVar(&config.CryptoKey, "crypto-key", "", "Путь до файла с публичным ключом для шифрования запросов на сервер")
 	flag.UintVar(&config.RateLimit, "l", 0, "Количество одновременно исходящих запросов на сервер")
+	flag.StringVar(&config.ConfigFile, "c", "", "Путь к файлу конфига в формате json")
+	flag.StringVar(&config.ConfigFile, "config", "", "Путь к файлу конфига в формате json")
 
 	var Usage = func() {
 		_, err := fmt.Fprintf(flag.CommandLine.Output(), "Параметры командной строки агента:\n")

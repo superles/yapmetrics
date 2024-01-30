@@ -8,6 +8,7 @@ import (
 	"github.com/superles/yapmetrics/internal/server/config"
 	"github.com/superles/yapmetrics/internal/server/middleware/auth"
 	"github.com/superles/yapmetrics/internal/server/middleware/compress"
+	"github.com/superles/yapmetrics/internal/server/middleware/decrypt"
 	"github.com/superles/yapmetrics/internal/server/middleware/logging"
 	"github.com/superles/yapmetrics/internal/utils/logger"
 	"net/http"
@@ -45,7 +46,7 @@ func New(s metricProvider, cfg *config.Config) *Server {
 
 func (s *Server) registerRoutes() {
 	s.router.Post("/update/", s.Update)
-	s.router.Post("/updates/", s.Updates)
+	s.router.With(decrypt.WithDecrypt(s.config.CryptoKey)).Post("/updates/", s.Updates)
 	s.router.Post("/value/", s.GetJSONValue)
 	s.router.Post("/update/counter/{name}/{value}", s.UpdateCounter)
 	s.router.Post("/update/gauge/{name}/{value}", s.UpdateGauge)

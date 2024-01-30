@@ -19,6 +19,9 @@ func parseFlags() Config {
 	//example: postgresql://test_user:test_user@localhost/test_db
 	flag.StringVar(&config.DatabaseDsn, "d", "", "строка подключения к базе данных в формате dsn")
 	flag.StringVar(&config.SecretKey, "k", "", "Секретный ключ для хеширования ответов и проверки запросов")
+	flag.StringVar(&config.CryptoKey, "crypto-key", "", "Путь до файла с приватным ключом для расшифровки запросов агента")
+	flag.StringVar(&config.ConfigFile, "c", "", "Путь к файлу конфига в формате json")
+	flag.StringVar(&config.ConfigFile, "config", "", "Путь к файлу конфига в формате json")
 
 	var Usage = func() {
 		_, err := fmt.Fprintf(flag.CommandLine.Output(), "Параметры командной строки сервера:\n")
