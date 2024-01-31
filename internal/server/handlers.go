@@ -34,6 +34,11 @@ func (s *Server) dumpStorage(ctx context.Context) {
 	}
 }
 
+// MainPage главная html страница с таблицей
+// @Description Вывод html таблицы с списком метрик
+// @Produce html
+// @Success 200 {string} string
+// @Router / [get]
 func (s *Server) MainPage(res http.ResponseWriter, r *http.Request) {
 	res.Header().Set("Content-Type", "text/html")
 	const tpl = `
@@ -93,6 +98,7 @@ func (s *Server) MainPage(res http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// BadRequest ошибочный запрос
 func (s *Server) BadRequest(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusBadRequest)
@@ -128,6 +134,13 @@ func (s *Server) UpdateGauge(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Update Обновление метрики.
+// @Accept json
+// @Produce json
+// @Param body body metric.JSONData true "обновленная метрика"
+// @Success 200 {object} metric.JSONData
+// @Success 400 {string} string
+// @Router /update/ [post]
 func (s *Server) Update(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
@@ -191,6 +204,13 @@ func (s *Server) Update(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// Updates Обновление метрик.
+// @Accept json
+// @Produce json
+// @Param body body []metric.JSONData true "обновленная метрика"
+// @Success 200 {object} []metric.JSONData
+// @Success 400 {string} string
+// @Router /updates/ [post]
 func (s *Server) Updates(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
@@ -273,6 +293,14 @@ func (s *Server) GetPing(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// GetValue Получение значения метрики в виде строки.
+// @Produce plain
+// @Param name   path string true "Название метрики"
+// @Param type path string true "Тип метрики"
+// @Success 200 {string} string
+// @Success 400 {string} string
+// @Success 404 {string} string
+// @Router /value/{type}/{name} [get]
 func (s *Server) GetValue(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/plain")
@@ -314,6 +342,13 @@ func (s *Server) GetValue(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// GetJSONValue Получение значения метрики в виде JSON.
+// @Accept json
+// @Produce json
+// @Param body body metric.JSONData true "обновленная метрика"
+// @Success 200 {object} metric.JSONData
+// @Success 400 {string} string
+// @Router /value/ [post]
 func (s *Server) GetJSONValue(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
@@ -350,11 +385,9 @@ func (s *Server) GetJSONValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var updatedJSON *metric.JSONData
+	var updatedJSON metric.JSONData
 
-	updatedJSON, err = metricItem.ToJSON()
-
-	if err != nil {
+	if updatedJSON, err = metricItem.ToJSON(); err != nil {
 		logger.Log.Error(fmt.Sprintf("ошибка конвертации метрики в json: %s", err))
 		http.Error(w, "ошибка сервера", http.StatusBadRequest)
 		return
