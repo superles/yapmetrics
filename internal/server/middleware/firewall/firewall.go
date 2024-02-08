@@ -13,14 +13,14 @@ func WithTrustedSubnet(subnet string) func(h http.Handler) http.Handler {
 				h.ServeHTTP(w, r)
 				return
 			}
-			realIp := r.Header.Get("X-Real-Ip")
-			if len(realIp) == 0 {
+			realIP := r.Header.Get("X-Real-Ip")
+			if len(realIP) == 0 {
 				logger.Log.Error("address not exist")
 				http.Error(w, "address not exist in header", http.StatusUnauthorized)
 				return
 			}
 
-			if inNetwork, err := network.IsAddressInNetwork(realIp, subnet); err != nil {
+			if inNetwork, err := network.IsAddressInNetwork(realIP, subnet); err != nil {
 				logger.Log.Error(err)
 				http.Error(w, "wrong ip or trusted subnet", http.StatusUnauthorized)
 				return

@@ -50,8 +50,8 @@ func (s *GRPCServer) Updates(ctx context.Context, req *pb.UpdateMetricsRequest) 
 			if len(values) == 0 {
 				return nil, status.Errorf(codes.Unauthenticated, "address not exist in metadata")
 			}
-			realIp := values[0]
-			inNetwork, err := network.IsAddressInNetwork(realIp, s.config.TrustedSubnet)
+			realIP := values[0]
+			inNetwork, err := network.IsAddressInNetwork(realIP, s.config.TrustedSubnet)
 			if err != nil {
 				return nil, err
 			}
