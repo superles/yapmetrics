@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/superles/yapmetrics/internal/agent/client"
+	"github.com/superles/yapmetrics/internal/utils/encoder"
 	"log"
 	"os"
 	"os/signal"
@@ -38,7 +40,21 @@ func main() {
 	appContext, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	if err = agent.New(storage, cfg).Run(appContext); err != nil {
+	cl := client.NewHTTPAgentClient(client.AgentClientParams{Key: cfg.SecretKey})
+
+	var app *agent.Agent
+
+	if len(cfg.CryptoKey) != 0 {
+		enc, err := encoder.New(cfg.CryptoKey)
+		if err != nil {
+			log.Panicln("ошибка инициализации encoder", err.Error())
+		}
+		app = agent.New(storage, cfg, cl, enc)
+	} else {
+		app = agent.New(storage, cfg, cl, nil)
+	}
+
+	if err = app.Run(appContext); err != nil {
 		log.Fatal("ошибка запуска агента", err.Error())
 	}
 	logger.Log.Info("Agent Started")

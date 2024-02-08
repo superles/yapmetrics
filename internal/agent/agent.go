@@ -10,6 +10,7 @@ import (
 	"github.com/superles/yapmetrics/internal/agent/client"
 	"github.com/superles/yapmetrics/internal/agent/config"
 	types "github.com/superles/yapmetrics/internal/metric"
+	"github.com/superles/yapmetrics/internal/utils/encoder"
 	"github.com/superles/yapmetrics/internal/utils/logger"
 	"go.uber.org/zap"
 	"io"
@@ -26,11 +27,12 @@ type Agent struct {
 	config  *config.Config
 	client  client.Client
 	logger  *zap.SugaredLogger
+	encoder *encoder.Encoder
 }
 
 // New Создание нового агента.
-func New(s metricProvider, cfg *config.Config) *Agent {
-	agent := &Agent{storage: s, config: cfg, client: client.NewHTTPAgentClient(client.AgentClientParams{Key: cfg.SecretKey})}
+func New(s metricProvider, cfg *config.Config, cl client.Client, enc *encoder.Encoder) *Agent {
+	agent := &Agent{storage: s, config: cfg, client: cl, encoder: enc}
 	return agent
 }
 
@@ -38,9 +40,22 @@ func (a *Agent) sendWithRetry(url string, contentType string, body []byte) error
 
 	start := time.Now()
 
+	var err error
+
+	var rawBytes []byte
+
+	if a.encoder != nil {
+		rawBytes, err = a.encoder.Encrypt(body)
+		if err != nil {
+			return err
+		}
+	} else {
+		rawBytes = body
+	}
+
 	response, err := retry.DoWithData(
 		func() (*http.Response, error) {
-			resp, err := a.client.Post(url, contentType, body, true)
+			resp, err := a.client.Post(url, contentType, rawBytes, true)
 			if err != nil {
 				var opError *net.OpError
 				if errors.As(err, &opError) {
@@ -205,6 +220,7 @@ func (a *Agent) sendAllJSON(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
 	url := fmt.Sprintf("http://%s/updates/", a.config.Endpoint)
 	err = a.sendWithRetry(url, "application/json", rawBytes)
 	return err
