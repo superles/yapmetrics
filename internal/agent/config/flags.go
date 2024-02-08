@@ -18,6 +18,8 @@ func parseFlags() Config {
 	flag.UintVar(&config.RateLimit, "l", 0, "Количество одновременно исходящих запросов на сервер")
 	flag.StringVar(&config.ConfigFile, "c", "", "Путь к файлу конфига в формате json")
 	flag.StringVar(&config.ConfigFile, "config", "", "Путь к файлу конфига в формате json")
+	flag.StringVar(&config.RealIP, "ip", "", "Системный IP для отправки")
+	flag.StringVar(&config.ClientType, "type", "http", "Тип агента: http, grpc")
 
 	var Usage = func() {
 		_, err := fmt.Fprintf(flag.CommandLine.Output(), "Параметры командной строки агента:\n")

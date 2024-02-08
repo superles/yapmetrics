@@ -3,7 +3,6 @@ package agent
 import (
 	"context"
 	"errors"
-	"fmt"
 	types "github.com/superles/yapmetrics/internal/metric"
 	"github.com/superles/yapmetrics/internal/utils/logger"
 	"sync"
@@ -66,15 +65,7 @@ func (a *Agent) worker(id int, ctx context.Context, input <-chan types.Collectio
 				results <- response{WorkerID: id, Error: errors.New("input channel closed")}
 				return
 			}
-
-			var rawBytes, err = compressMetrics(metrics)
-			if err != nil {
-				results <- response{WorkerID: id, Error: err}
-				logger.Log.Debug("ошибка сжатия метрик", err.Error())
-				continue
-			}
-			url := fmt.Sprintf("http://%s/updates/", a.config.Endpoint)
-			err = a.sendWithRetry(url, "application/json", rawBytes)
+			err := a.sendAll(ctx, metrics.ToSlice())
 			if err != nil {
 				logger.Log.Debug("ошибка отправки метрик", err.Error())
 				results <- response{WorkerID: id, Error: err}

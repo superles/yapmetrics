@@ -9,6 +9,7 @@ import (
 
 type Config struct {
 	Endpoint        string `env:"ADDRESS" json:"address"`
+	GrpcAddress     string `env:"GRPC_ADDRESS" json:"grpc_address"`
 	LogLevel        string `env:"SERVER_LOG_LEVEL"`
 	StoreInterval   int    `env:"STORE_INTERVAL" json:"store_interval"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH" json:"store_file"`
@@ -17,6 +18,7 @@ type Config struct {
 	SecretKey       string `env:"KEY"`
 	CryptoKey       string `env:"CRYPTO_KEY" json:"crypto_key"`
 	ConfigFile      string `env:"CONFIG"`
+	TrustedSubnet   string `env:"TRUSTED_SUBNET" json:"trusted_subnet"`
 }
 
 var (
@@ -90,6 +92,18 @@ func New() *Config {
 			instance.CryptoKey = envConfig.CryptoKey
 		} else {
 			instance.CryptoKey = flagConfig.CryptoKey
+		}
+
+		if len(envConfig.TrustedSubnet) > 0 {
+			instance.TrustedSubnet = envConfig.TrustedSubnet
+		} else {
+			instance.TrustedSubnet = flagConfig.TrustedSubnet
+		}
+
+		if len(envConfig.GrpcAddress) > 0 {
+			instance.GrpcAddress = envConfig.GrpcAddress
+		} else {
+			instance.GrpcAddress = flagConfig.GrpcAddress
 		}
 	})
 

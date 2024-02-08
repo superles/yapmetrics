@@ -402,5 +402,4 @@ func (s *Server) GetJSONValue(w http.ResponseWriter, r *http.Request) {
 	} else {
 		logger.Log.Error(fmt.Sprintf("ошибка сериализации: %s", err))
 	}
-
 }

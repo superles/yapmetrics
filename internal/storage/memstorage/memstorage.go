@@ -13,6 +13,8 @@ import (
 
 var storageSync = sync.RWMutex{}
 
+var dumpSync = sync.Mutex{}
+
 type MemStorage struct {
 	collection map[string]metric.Metric
 }
@@ -91,25 +93,30 @@ func (s *MemStorage) Ping(ctx context.Context) error {
 }
 
 func (s *MemStorage) Dump(ctx context.Context, path string) error {
-	file, fileErr := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
-	if fileErr != nil {
-		return fileErr
-	}
-	if err := file.Truncate(0); err != nil {
+	dumpSync.Lock()
+	defer dumpSync.Unlock()
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	if err != nil {
 		return err
 	}
+	defer func(file *os.File) {
+		if err := file.Close(); err != nil {
+			logger.Log.Errorf("dump file close error %s", err)
+		}
+	}(file)
 	encoder := json.NewEncoder(file)
 	metrics, err := s.GetAll(ctx)
 	if err != nil {
 		return err
 	}
 	for _, item := range metrics {
-		err := encoder.Encode(&item)
+		err = encoder.Encode(&item)
 		if err != nil {
-			return fileErr
+			return err
 		}
 	}
-	if err := file.Close(); err != nil {
+
+	if err = file.Close(); err != nil {
 		return err
 	}
 	logger.Log.Info("dump success")

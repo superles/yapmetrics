@@ -19,12 +19,22 @@ type Gauge float64
 type Counter int64
 
 type Metric struct {
-	Name  string  //имя метрики
-	Type  int     //тип метрики counter | gauge
-	Value float64 //Значение метрики
+	Name  string  // имя метрики
+	Type  int     // тип метрики counter | gauge
+	Value float64 // значение метрики
 }
 
 type Collection map[string]Metric
+
+func (c Collection) ToSlice() []Metric {
+	data := make([]Metric, len(c))
+	idx := 0
+	for _, item := range c {
+		data[idx] = item
+		idx++
+	}
+	return data
+}
 
 func (m *Metric) String() (string, error) {
 	switch m.Type {

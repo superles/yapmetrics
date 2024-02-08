@@ -1,7 +1,10 @@
 package client
 
-import "net/http"
+import (
+	"context"
+	"github.com/superles/yapmetrics/internal/metric"
+)
 
 type Client interface {
-	Post(url string, contentType string, body []byte, compress bool) (*http.Response, error)
+	Send(ctx context.Context, endpoint string, metrics []metric.Metric) error
 }
