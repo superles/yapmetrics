@@ -7,7 +7,6 @@ import (
 	"github.com/superles/yapmetrics/internal/agent/client"
 	"github.com/superles/yapmetrics/internal/agent/config"
 	types "github.com/superles/yapmetrics/internal/metric"
-	"github.com/superles/yapmetrics/internal/utils/encoder"
 	"github.com/superles/yapmetrics/internal/utils/logger"
 	"net"
 	"time"
@@ -19,12 +18,11 @@ type Agent struct {
 	storage metricProvider
 	config  *config.Config
 	client  client.Client
-	encoder *encoder.Encoder
 }
 
 // New Создание нового агента.
-func New(s metricProvider, cfg *config.Config, cl client.Client, enc *encoder.Encoder) *Agent {
-	agent := &Agent{storage: s, config: cfg, client: cl, encoder: enc}
+func New(s metricProvider, cfg *config.Config, cl client.Client) *Agent {
+	agent := &Agent{storage: s, config: cfg, client: cl}
 	return agent
 }
 

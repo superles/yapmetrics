@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	types "github.com/superles/yapmetrics/internal/metric"
-	"github.com/superles/yapmetrics/internal/server"
 	"github.com/superles/yapmetrics/internal/server/config"
 	"github.com/superles/yapmetrics/internal/utils/logger"
 	"github.com/superles/yapmetrics/internal/utils/network"
@@ -19,25 +18,13 @@ import (
 	"google.golang.org/grpc"
 )
 
-type metricProvider interface {
-	GetAll(ctx context.Context) (map[string]types.Metric, error)
-	Get(ctx context.Context, name string) (types.Metric, error)
-	Set(ctx context.Context, data types.Metric) error
-	SetAll(ctx context.Context, data []types.Metric) error
-	SetFloat(ctx context.Context, Name string, Value float64) error
-	IncCounter(ctx context.Context, Name string, Value int64) error
-	Ping(ctx context.Context) error
-	Dump(ctx context.Context, path string) error
-	Restore(ctx context.Context, path string) error
-}
-
 type GRPCServer struct {
 	pb.UnimplementedServerServiceServer
 	storage metricProvider
 	config  *config.Config
 }
 
-func NewGrpcServer(storage metricProvider, cfg *config.Config) server.IServer {
+func NewGrpcServer(storage metricProvider, cfg *config.Config) IServer {
 	return &GRPCServer{storage: storage, config: cfg}
 }
 

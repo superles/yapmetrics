@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"github.com/superles/yapmetrics/internal/agent/client"
 	pb "github.com/superles/yapmetrics/internal/grpc/proto"
 	"github.com/superles/yapmetrics/internal/metric"
 	"github.com/superles/yapmetrics/internal/utils/encoder"
@@ -23,7 +22,7 @@ type GrpcClient struct {
 	params GrpcClientParams
 }
 
-func NewGrpcClient(params GrpcClientParams) client.Client {
+func NewGrpcClient(params GrpcClientParams) Client {
 	return &GrpcClient{params}
 }
 

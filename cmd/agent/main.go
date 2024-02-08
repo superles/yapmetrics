@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/superles/yapmetrics/internal/agent/client"
-	grpc "github.com/superles/yapmetrics/internal/grpc/client"
 	"github.com/superles/yapmetrics/internal/utils/encoder"
 	"github.com/superles/yapmetrics/internal/utils/network"
 	"log"
@@ -64,13 +63,13 @@ func main() {
 	var cl client.Client
 
 	if cfg.ClientType == "grpc" {
-		cl = grpc.NewGrpcClient(grpc.GrpcClientParams{Key: cfg.SecretKey, RealIP: systemIP, Encoder: enc})
+		cl = client.NewGrpcClient(client.GrpcClientParams{Key: cfg.SecretKey, RealIP: systemIP, Encoder: enc})
 	} else {
 		params := client.AgentClientParams{Key: cfg.SecretKey, RealIP: systemIP, Compress: true, Encoder: enc}
 		cl = client.NewHTTPAgentClient(params)
 	}
 
-	app := agent.New(storage, cfg, cl, enc)
+	app := agent.New(storage, cfg, cl)
 
 	if err = app.Run(appContext); err != nil {
 		log.Panic("ошибка запуска агента", err.Error())

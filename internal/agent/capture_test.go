@@ -11,9 +11,9 @@ import (
 )
 
 func Benchmark_captureRuntime(b *testing.B) {
-
 	cfg := config.New()
-	agent := New(memstorage.New(), config.New(), client.NewHTTPAgentClient(client.AgentClientParams{Key: cfg.SecretKey}), nil)
+	cl := client.NewHTTPAgentClient(client.AgentClientParams{Key: cfg.SecretKey})
+	agent := New(memstorage.New(), cfg, cl)
 
 	ctx := context.Background()
 
@@ -25,11 +25,10 @@ func Benchmark_captureRuntime(b *testing.B) {
 		}
 	}
 }
-
 func Benchmark_capturePsutil(b *testing.B) {
-
 	cfg := config.New()
-	agent := New(memstorage.New(), config.New(), client.NewHTTPAgentClient(client.AgentClientParams{Key: cfg.SecretKey}), nil)
+	cl := client.NewHTTPAgentClient(client.AgentClientParams{Key: cfg.SecretKey})
+	agent := New(memstorage.New(), config.New(), cl)
 
 	ctx := context.Background()
 
@@ -49,7 +48,8 @@ func TestAgent_captureRuntime(t *testing.T) {
 		err := logger.Initialize(cfg.LogLevel)
 		require.NoError(t, err)
 
-		a := New(storage, config.New(), client.NewHTTPAgentClient(client.AgentClientParams{Key: cfg.SecretKey}), nil)
+		cl := client.NewHTTPAgentClient(client.AgentClientParams{Key: cfg.SecretKey})
+		a := New(storage, cfg, cl)
 
 		err = a.captureRuntime(context.Background())
 		require.NoError(t, err)
@@ -62,8 +62,8 @@ func TestAgent_capturePsutil(t *testing.T) {
 		storage := memstorage.New()
 		err := logger.Initialize(cfg.LogLevel)
 		require.NoError(t, err)
-
-		a := New(storage, config.New(), client.NewHTTPAgentClient(client.AgentClientParams{Key: cfg.SecretKey}), nil)
+		cl := client.NewHTTPAgentClient(client.AgentClientParams{Key: cfg.SecretKey})
+		a := New(storage, cfg, cl)
 
 		err = a.capturePsutil(context.Background())
 		require.NoError(t, err)
@@ -72,8 +72,8 @@ func TestAgent_capturePsutil(t *testing.T) {
 
 func Test_randFloat(t *testing.T) {
 	t.Run("test randFloat", func(t *testing.T) {
-		if got := randFloat(0, 100); got <= 0 || got >= 100 {
-			t.Errorf("randFloat() = %v, want 0<%v<100", got, got)
+		if got := randFloat(); got <= 0 || got >= 1000 {
+			t.Errorf("randFloat() = %v, want 0<%v<1000", got, got)
 		}
 	})
 }

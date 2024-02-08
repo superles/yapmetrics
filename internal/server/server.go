@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	types "github.com/superles/yapmetrics/internal/metric"
@@ -51,7 +52,10 @@ func New(s metricProvider, cfg *config.Config) *Server {
 
 func (s *Server) registerRoutes() {
 	s.router.Post("/update/", s.Update)
-	s.router.With(decrypt.WithDecrypt(s.config.CryptoKey), firewall.WithTrustedSubnet(s.config.TrustedSubnet)).Post("/updates/", s.Updates)
+	s.router.With(
+		decrypt.WithDecrypt(s.config.CryptoKey),
+		firewall.WithTrustedSubnet(s.config.TrustedSubnet),
+	).Post("/updates/", s.Updates)
 	s.router.Post("/value/", s.GetJSONValue)
 	s.router.Post("/update/counter/{name}/{value}", s.UpdateCounter)
 	s.router.Post("/update/gauge/{name}/{value}", s.UpdateGauge)
@@ -112,7 +116,7 @@ func (s *Server) Run(appContext context.Context) error {
 	}
 
 	go func() {
-		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+		if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 			logger.Log.Error(fmt.Sprintf("не могу запустить сервер: %s", err))
 		}
 	}()

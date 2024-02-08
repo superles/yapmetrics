@@ -15,10 +15,10 @@ import (
 func TestAgent_generator(t *testing.T) {
 	store := memstorage.New()
 	cfg := config.New()
-	agentClient := client.NewHTTPAgentClient(client.AgentClientParams{})
+	agentClient := client.NewHTTPAgentClient(client.AgentClientParams{Key: cfg.SecretKey})
 	err := logger.Initialize(cfg.LogLevel)
 	require.NoError(t, err)
-	a := Agent{storage: store, config: cfg, client: agentClient, encoder: nil}
+	a := Agent{storage: store, config: cfg, client: agentClient}
 	ctx, done := context.WithCancel(context.Background())
 	defer done()
 	err = store.Set(ctx, types.Metric{Name: "test", Type: types.CounterMetricType, Value: 1})

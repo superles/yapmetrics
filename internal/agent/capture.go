@@ -10,8 +10,8 @@ import (
 	"strconv"
 )
 
-func randFloat(min, max float64) float64 {
-	return min + rand.Float64()*(max-min)
+func randFloat() float64 {
+	return rand.Float64() * 1000
 }
 
 func (a *Agent) captureRuntime(ctx context.Context) error {
@@ -46,7 +46,7 @@ func (a *Agent) captureRuntime(ctx context.Context) error {
 		{Name: "StackSys", Type: metric.GaugeMetricType, Value: float64(stats.StackSys)},
 		{Name: "Sys", Type: metric.GaugeMetricType, Value: float64(stats.Sys)},
 		{Name: "TotalAlloc", Type: metric.GaugeMetricType, Value: float64(stats.TotalAlloc)},
-		{Name: "RandomValue", Type: metric.GaugeMetricType, Value: randFloat(0, 1000)},
+		{Name: "RandomValue", Type: metric.GaugeMetricType, Value: randFloat()},
 		{Name: "PollCount", Type: metric.CounterMetricType, Value: 1},
 	}
 
@@ -58,7 +58,6 @@ func (a *Agent) captureRuntime(ctx context.Context) error {
 }
 
 func (a *Agent) capturePsutil(ctx context.Context) error {
-
 	metrics := make([]metric.Metric, 0)
 
 	stats, err := mem.VirtualMemory()
