@@ -100,9 +100,13 @@ func (a *Agent) sendTicker(ctx context.Context, reportInterval time.Duration) {
 			var metrics types.Collection
 			var err error
 			metrics, err = a.storage.GetAll(ctx)
+			if err != nil {
+				logger.Log.Error("storage get all error", err.Error())
+				continue
+			}
 			err = a.sendAll(ctx, metrics.ToSlice())
 			if err != nil {
-				logger.Log.Error("reportInterval error", err.Error())
+				logger.Log.Error("sendAll error", err.Error())
 			}
 		}
 	}
