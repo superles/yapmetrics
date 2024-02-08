@@ -9,6 +9,7 @@ import (
 	"github.com/superles/yapmetrics/internal/utils/encoder"
 	"github.com/superles/yapmetrics/internal/utils/logger"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -28,14 +29,13 @@ func NewGrpcClient(params GrpcClientParams) client.Client {
 
 func (c GrpcClient) Send(ctx context.Context, endpoint string, metrics []metric.Metric) error {
 	// Замените "localhost:50051" на адрес вашего gRPC сервера
-	conn, err := grpc.Dial(endpoint, grpc.WithInsecure())
+	conn, err := grpc.Dial(endpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
 	}
 
 	defer func(conn *grpc.ClientConn) {
-		err := conn.Close()
-		if err != nil {
+		if err = conn.Close(); err != nil {
 			logger.Log.Error(err)
 		}
 	}(conn)
@@ -62,10 +62,6 @@ func (c GrpcClient) Send(ctx context.Context, endpoint string, metrics []metric.
 	if len(c.params.RealIP) != 0 {
 		ctx = metadata.AppendToOutgoingContext(ctx, "X-RealIP", c.params.RealIP)
 	}
-
-	//if len(hash) != 0 {
-	//	ctx = metadata.AppendToOutgoingContext(ctx, "Hash", hash)
-	//}
 
 	// Вызываем gRPC метод с передачей JSON данных и метаданных
 	response, err := serviceClient.Updates(ctx, &pb.UpdateMetricsRequest{Metrics: data})
