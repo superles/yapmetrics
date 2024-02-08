@@ -21,6 +21,7 @@ package main
 import (
 	"context"
 	"fmt"
+	grpcServer "github.com/superles/yapmetrics/internal/grpc/server"
 	"github.com/superles/yapmetrics/internal/server"
 	"github.com/superles/yapmetrics/internal/server/config"
 	"github.com/superles/yapmetrics/internal/storage"
@@ -61,8 +62,15 @@ func main() {
 		log.Fatal("ошибка инициализации логера", err.Error())
 	}
 	srv := server.New(store, cfg)
+	grpcSrv := grpcServer.NewGrpcServer(store, cfg)
 	appContext, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	go func() {
+		if err = grpcSrv.Run(appContext); err != nil {
+			log.Fatal("ошибка запуска grpc сервера", err.Error())
+		}
+	}()
+
 	if err = srv.Run(appContext); err != nil {
 		log.Fatal("ошибка запуска сервера", err.Error())
 	}

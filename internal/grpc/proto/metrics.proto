@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package grpc;
+
+option go_package = "grpc/proto";
+
+message Metric {
+  string id = 1;  // metric name
+  enum Type {
+    GAUGE = 0;
+    COUNTER = 1;
+  }
+  Type type = 2;    // metric type
+  double value = 5;  // gauge value
+}
+
+message Metrics {
+  repeated Metric values = 1;
+}
+
+message UpdateMetricsResponse {
+  string error = 1; // ошибка
+}
+
+message UpdateMetricsRequest {
+  repeated Metric metrics = 1;
+}
+
+service ServerService {
+  rpc Updates(UpdateMetricsRequest) returns (UpdateMetricsResponse);
+}

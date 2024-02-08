@@ -18,7 +18,7 @@ func TestAgent_generator(t *testing.T) {
 	agentClient := client.NewHTTPAgentClient(client.AgentClientParams{})
 	err := logger.Initialize(cfg.LogLevel)
 	require.NoError(t, err)
-	a := Agent{store, cfg, agentClient, logger.Log, nil}
+	a := Agent{storage: store, config: cfg, client: agentClient, encoder: nil}
 	ctx, done := context.WithCancel(context.Background())
 	defer done()
 	err = store.Set(ctx, types.Metric{Name: "test", Type: types.CounterMetricType, Value: 1})

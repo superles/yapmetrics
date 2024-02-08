@@ -22,6 +22,7 @@ func parseFlags() Config {
 	flag.StringVar(&config.CryptoKey, "crypto-key", "", "Путь до файла с приватным ключом для расшифровки запросов агента")
 	flag.StringVar(&config.ConfigFile, "c", "", "Путь к файлу конфига в формате json")
 	flag.StringVar(&config.ConfigFile, "config", "", "Путь к файлу конфига в формате json")
+	flag.StringVar(&config.TrustedSubnet, "t", "", "Доверенная подсеть")
 
 	var Usage = func() {
 		_, err := fmt.Fprintf(flag.CommandLine.Output(), "Параметры командной строки сервера:\n")

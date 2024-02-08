@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/superles/yapmetrics/internal/agent/client"
+	grpc "github.com/superles/yapmetrics/internal/grpc/client"
 	"github.com/superles/yapmetrics/internal/utils/encoder"
+	"github.com/superles/yapmetrics/internal/utils/network"
 	"log"
 	"os"
 	"os/signal"
@@ -40,22 +42,38 @@ func main() {
 	appContext, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	cl := client.NewHTTPAgentClient(client.AgentClientParams{Key: cfg.SecretKey})
+	systemIP := cfg.RealIP
 
-	var app *agent.Agent
+	if len(systemIP) == 0 {
+		systemIP, err = network.ParseIP()
+		if err != nil {
+			// error of catching ip is not critical
+			logger.Log.Error(err.Error())
+		}
+	}
+
+	var enc *encoder.Encoder
 
 	if len(cfg.CryptoKey) != 0 {
-		enc, err := encoder.New(cfg.CryptoKey)
+		enc, err = encoder.New(cfg.CryptoKey)
 		if err != nil {
 			log.Panicln("ошибка инициализации encoder", err.Error())
 		}
-		app = agent.New(storage, cfg, cl, enc)
-	} else {
-		app = agent.New(storage, cfg, cl, nil)
 	}
 
+	var cl client.Client
+
+	if cfg.ClientType == "grpc" {
+		cl = grpc.NewGrpcClient(grpc.GrpcClientParams{Key: cfg.SecretKey, RealIP: systemIP, Encoder: enc})
+	} else {
+		params := client.AgentClientParams{Key: cfg.SecretKey, RealIP: systemIP, Compress: true, Encoder: enc}
+		cl = client.NewHTTPAgentClient(params)
+	}
+
+	app := agent.New(storage, cfg, cl, enc)
+
 	if err = app.Run(appContext); err != nil {
-		log.Fatal("ошибка запуска агента", err.Error())
+		log.Panic("ошибка запуска агента", err.Error())
 	}
 	logger.Log.Info("Agent Started")
 	<-appContext.Done()

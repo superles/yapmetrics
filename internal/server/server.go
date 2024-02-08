@@ -9,6 +9,7 @@ import (
 	"github.com/superles/yapmetrics/internal/server/middleware/auth"
 	"github.com/superles/yapmetrics/internal/server/middleware/compress"
 	"github.com/superles/yapmetrics/internal/server/middleware/decrypt"
+	"github.com/superles/yapmetrics/internal/server/middleware/firewall"
 	"github.com/superles/yapmetrics/internal/server/middleware/logging"
 	"github.com/superles/yapmetrics/internal/utils/logger"
 	"net/http"
@@ -30,6 +31,10 @@ type metricProvider interface {
 	Restore(ctx context.Context, path string) error
 }
 
+type IServer interface {
+	Run(ctx context.Context) error
+}
+
 type Server struct {
 	storage metricProvider
 	router  *chi.Mux
@@ -46,7 +51,7 @@ func New(s metricProvider, cfg *config.Config) *Server {
 
 func (s *Server) registerRoutes() {
 	s.router.Post("/update/", s.Update)
-	s.router.With(decrypt.WithDecrypt(s.config.CryptoKey)).Post("/updates/", s.Updates)
+	s.router.With(decrypt.WithDecrypt(s.config.CryptoKey), firewall.WithTrustedSubnet(s.config.TrustedSubnet)).Post("/updates/", s.Updates)
 	s.router.Post("/value/", s.GetJSONValue)
 	s.router.Post("/update/counter/{name}/{value}", s.UpdateCounter)
 	s.router.Post("/update/gauge/{name}/{value}", s.UpdateGauge)

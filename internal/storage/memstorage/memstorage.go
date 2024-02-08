@@ -13,6 +13,8 @@ import (
 
 var storageSync = sync.RWMutex{}
 
+var dumpSync = sync.Mutex{}
+
 type MemStorage struct {
 	collection map[string]metric.Metric
 }
@@ -91,13 +93,15 @@ func (s *MemStorage) Ping(ctx context.Context) error {
 }
 
 func (s *MemStorage) Dump(ctx context.Context, path string) error {
+	dumpSync.Lock()
+	defer dumpSync.Unlock()
 	file, fileErr := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
 	if fileErr != nil {
 		return fileErr
 	}
-	if err := file.Truncate(0); err != nil {
-		return err
-	}
+	//if err := file.Truncate(0); err != nil {
+	//	return err
+	//}
 	encoder := json.NewEncoder(file)
 	metrics, err := s.GetAll(ctx)
 	if err != nil {
@@ -109,6 +113,11 @@ func (s *MemStorage) Dump(ctx context.Context, path string) error {
 			return fileErr
 		}
 	}
+
+	if err := file.Sync(); err != nil {
+		return err
+	}
+
 	if err := file.Close(); err != nil {
 		return err
 	}
